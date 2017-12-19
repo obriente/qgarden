@@ -70,3 +70,6 @@ Our blossom algorithm has the following known bugs(/features):
 1. We assume every other vertex has an edge to the boundary, which implies that in a matching *all* vertices will be paired. This is different from the standard MWPM problem, and currently the code will throw errors if this is not the case.
 
 2. Currently feeding in vertices with overtight edges will cause the algorithm to fail. In the future it would be good to make it so that instead we just shrink the appropriate vertices and unmatch the appropriate edges. 
+
+### License
+This work is distributed under the GNU GPLv3. See LICENSE.txt. (c) 2017 Thomas O'Brien
