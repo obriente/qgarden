@@ -7,8 +7,7 @@ Author: Thomas O'Brien (obrien@lorentz.leidenuniv.nl)
 Thanks to: Brian Tarasinski, Adriaan Rol, Niels Bultink, Xiang Fu, Ben Criger, Paul Baireuther and Leo DiCarlo for comments and assistance.
 
 References: The article to cite when using this code is
-	'T.E. O'Brien, B. Tarasinski and L. DiCarlo, arXiv:1703.04136 (2017)
-
+	O'Brien, T.E. and Tarasinski, B. and DiCarlo, L. npj Quant. Inf. 3, 39 (2017)
 ## Overview
 MWPM decoding for surface and repetition codes consists of three reasonably-well separated tasks:
 1. Generating weight data
@@ -73,7 +72,3 @@ Our blossom algorithm has the following known bugs(/features):
 
 ### License
 This work is distributed under the GNU GPLv3. See LICENSE.txt. (c) 2017 Thomas O'Brien
-
-### Citation
-The correct citation for this work is:
-O'Brien, T.E. and Tarasinski, B. and DiCarlo, L. npj Quant. Inf. 3, 39 (2017)
