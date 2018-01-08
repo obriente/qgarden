@@ -86,14 +86,10 @@ def run(data, distance, max_lookback, t1, t2, t_cycle, pm,
                              weight_calculation_method='weight_matrix',
                              weight_matrix=weight_matrix,
                              boundary_vec=boundary_vec,
-                             deriv_flag=deriv_flag,
-                             two_boundaries_flag=True)
+                             deriv_flag=deriv_flag)
 
     # Initialize list of results
     result = []
-
-    if confidence_flag:
-        confidences = []
 
     for experiment in data:
 
@@ -121,11 +117,7 @@ def run(data, distance, max_lookback, t1, t2, t_cycle, pm,
             result.append(gard.result(final_stabilizers=final_stabilizers,
                                       stab_index_left=stab_index_left,
                                       stab_index_right=stab_index_right,
-                                      continue_flag=False,
-                                      confidence_flag=confidence_flag))
-
-            if confidence_flag:
-                confidences.append(gard.confidence)
+                                      continue_flag=False))
 
         else:
 
@@ -133,7 +125,6 @@ def run(data, distance, max_lookback, t1, t2, t_cycle, pm,
             # as if we could read the experiment out and keep it too.
             # I like to think of this as an executive experiment order.
             single_result = []
-            single_confidence = []
 
             # Run over each time-step
             for syndrome, final_stabilizers in experiment:
@@ -153,17 +144,9 @@ def run(data, distance, max_lookback, t1, t2, t_cycle, pm,
                 sr = gard.result(final_stabilizers=final_stabilizers,
                                  stab_index_left=stab_index_left,
                                  stab_index_right=stab_index_right,
-                                 continue_flag=True,
-                                 confidence_flag=confidence_flag)
+                                 continue_flag=True)
                 single_result.append(sr)
 
-                if confidence_flag:
-                    single_confidence.append(gard.confidence)
-
             result.append(single_result)
-            confidences.append(single_confidence)
-
-    if confidence_flag:
-        return result, confidences
 
     return result

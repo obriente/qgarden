@@ -1,14 +1,9 @@
 """
-Blossom_v3_3
-
-(c) 2017 Thomas O'Brien
-Distributed under the GNU GPLv3. See LICENSE.txt or
-https://www.gnu.org/licenses/gpl.txt
+Blossom_v3_2
 
 Written by Thomas O'Brien, after discussions with Xiang Fu and Adriaan Rol
 
 3.2: improved variable names
-3.3: added second boundary vertex
 
 Implements the blossom algorithm in a manner similar to that outlined
 In the blossom V paper by Vladimir Kolmogorov, but using only
@@ -18,9 +13,13 @@ Supports adding single vertices at a time, and memory management.
 A wrapper has been added to insert an entire weight matrix at once,
 which is in the tests folder of the quantumerrorcorrection package.
 """
-
+#Python 2.7 import
+#from __future__ import division
 import numpy as np
 from collections import deque
+# Python 2.7 import
+#import Queue as queue
+# Python 3 import
 import queue
 
 
@@ -60,7 +59,7 @@ class Bloss:
 
         # time_weight_list: list of 'weights' between a vertex
         # and the time-boundary, giving us a flag to stop calculating
-        self.time_weight_list = [None,None]
+        self.time_weight_list = [None]
 
         # time_boundary: stores the position of the time boundary
         # when it is set (otherwise empty)
@@ -73,16 +72,18 @@ class Bloss:
         # pairing_real_list: prl[ril[i]] = pl[i]
         # I.e. this is what gets returned to the user. Using two lists
         # is solely to prevent unnecessary additional memory access
-        self.pairing_real_list = [None,None]
+        # On the FPGA, this is not guaranteed to be up to date
+        # unless updated explicitly.
+        self.pairing_real_list = [None]
 
         # reverse_index_list: Allows the updating of self.pairing_real_list
         # from self.pairing_list
-        self.reverse_index_list = [0,1]
+        self.reverse_index_list = [0]
 
         # forward_index_list: list storing the order in which vertices
         # were inserted; when we need to free up memory this is accessed from
         # the top to give the order in which vertices should be deleted
-        self.forward_index_list = [0,1]
+        self.forward_index_list = [0]
 
         #
         # Memory management structures
@@ -105,7 +106,7 @@ class Bloss:
         # pairing_list: pl[i] is a pair [v,e], where
         # v is the vertex that vertex i is paired to, and
         # e is the edge that they are paired along.
-        self.pairing_list = [[],[]]
+        self.pairing_list = [[]]
 
         # unpaired_list: list of vertices to become roots,
         # to be accessed in a lifo manner (so in python we use a deque)
@@ -113,7 +114,7 @@ class Bloss:
 
         # node_weight_list: so we can find
         # each effective edge weight
-        self.node_weight_list = [0,0]
+        self.node_weight_list = [0]
 
         # node_edge_list: stores a list of edges each node is connected to
         # each entry takes the form [pointer, index], with:
@@ -124,7 +125,7 @@ class Bloss:
         # are stored in self.edge_list[pointer][1] and self.edge_list[pointer][3]
         # or self.edge_list[pointer][2] and self.edge_list[pointer][4]
         # this reduces access time slightly.
-        self.node_edge_list = [[],[]]  # O(N)
+        self.node_edge_list = [[]]  # O(N)
 
         # edge_list: stores the list of edges
         # Each edge takes the form [weight,v1,v2,n1,n2,active_flag] with:
@@ -151,20 +152,20 @@ class Bloss:
         # i.e. the blossoms which a vertex/blossom sit inside.
         # Note that a node should only ever be contained within a tree
         # if self.blossom_list[j]=None
-        self.blossom_list = [None,None]
+        self.blossom_list = [None]
 
         # root_list: list of roots of cycles if present.
-        self.root_list = [None,None]
+        self.root_list = [None]
 
         # cycle_list: list of cycles if present - i.e. this
         # is only not None if we have a blossom, in which case it is
         # the list of the indices it contains.
-        self.cycle_list = [[],[]]  # O(B)
+        self.cycle_list = [[]]  # O(B)
 
         # cycle_edge_list: list of cycle edges if blossom
         # in form [ep, vp]. cel[i] is the edge connecting cl[i] and cl[i+1]
         # and vp is the pointer to go to cl[i+1]
-        self.cycle_edge_list = [[],[]]
+        self.cycle_edge_list = [[]]
 
         #
         # Structures storing information about trees
@@ -211,15 +212,13 @@ class Bloss:
         # Given that tbl[j][0] = self.edge_list[tbl[j][1]][3+tbl[j][2]], we might
         # consider removing it; we trade immediacy of access for not having
         # to keep it updated.
-        self.tree_branch_list = [[],[]]  # O(N)
+        self.tree_branch_list = [[]]  # O(N)
 
         # outer_node_list: list of all outer nodes in tree
         self.outer_node_list = []  # O(T)
 
         # inner_node_list: list of all inner nodes
         self.inner_node_list = []  # O(T)
-
-        self.mw_flag = True
 
     ###########################################################################
     # Top level algorithms (algorithms to be called from outside this file) ###
@@ -400,7 +399,7 @@ class Bloss:
             else:  # Something is wrong
                 raise ValueError('Instruction not understood.')
 
-    def finish(self, boundary_list=None, weight_lists=[], c_flag=False, confidence_flag=False):
+    def finish(self, boundary_list=None, weight_lists=[], c_flag=False):
         '''
         Adds time boundary vertex to blossom, finishes algorithm,
         returns result.
@@ -455,8 +454,6 @@ class Bloss:
             # root and cycle. So, before we return to the user,
             # this is all done here.
             self.final_pairing_update()
-            if confidence_flag:
-                self.get_confidence()
 
             if c_flag:
                 # Revert back to previous state - not needed on FPGA
@@ -623,8 +620,6 @@ class Bloss:
         # this is all done here.
         self.final_pairing_update()
 
-        if confidence_flag:
-            self.get_confidence()
         #
         # Data reversion and result returning
         #
@@ -747,6 +742,10 @@ class Bloss:
             self.node_edge_list[gi].append([edge_index, vp])
             self.node_edge_list[gi2].append([edge_index, 1-vp])
 
+            # Flag whether we encounter another edge from a blossom
+            # to the same vertex
+            other_edge_flag = False
+
             # get weight, and go up through blossoms till
             # the top, each time subtracting the node weight
             # *** of the previous blossom ***
@@ -778,13 +777,10 @@ class Bloss:
 
                     weight_to_check = edge_to_check[0]
                     temp_gi = gi2
-                    while True:
-                        if not self.blossom_list[temp_gi]:
-                            break
-                        if self.node_edge_list[self.blossom_list[temp_gi]][-1][0] != ep:
-                            break
+                    while temp_gi is not None and temp_gi != edge_to_check[4-vp_to_check]:
                         weight_to_check += self.node_weight_list[temp_gi]
                         temp_gi = self.blossom_list[temp_gi]
+
 
                     # If our current edge has been beaten
                     if weight_to_check <= weight - self.node_weight_list[oldgi2]:
@@ -797,6 +793,9 @@ class Bloss:
                         break
 
                     else:
+                        # Flag that we now have to change the last entry
+                        # of the edge list for all nodes above this.
+                        other_edge_flag = True
 
                         # We need to bring the node index for the other edge
                         # back down to the node before this.
@@ -817,28 +816,7 @@ class Bloss:
                         # 4-vp points to the position of the node in the edge
                         edge_to_check[4-vp_to_check] = n2_new
 
-                        # go through to the top of the blossom stack, removing
-                        # all places where this node has been added
-                        while True:
-
-                            # If we have reached the top of the blossom stack,
-                            # no need to continue
-                            if not self.blossom_list[n2_new]:
-                                break
-
-                            # If this node has already been beaten, no need
-                            # to continue
-                            if self.node_edge_list[self.blossom_list[n2_new]][-1][0] != ep:
-                                break
-
-                            # re-increase weight on edge
-                            edge_to_check[0] += self.node_weight_list[n2_new]
-
-                            # else, step back one node
-                            n2_new = self.blossom_list[n2_new]
-
-                            # Otherwise, delete this node for future use.
-                            del self.node_edge_list[n2_new][-1]
+                        edge_to_check[0] += self.node_weight_list[n2_new]
 
                         # flag edge as inactive
                         edge_to_check[5] = False
@@ -856,7 +834,10 @@ class Bloss:
                 # the other_edge flag, as if it is True, we already have
                 # such an edge, and we just need to change the index.
 
-                self.node_edge_list[gi2].append([edge_index, 1-vp])
+                if other_edge_flag:
+                    self.node_edge_list[gi2][-1] = [edge_index, 1-vp]
+                else:
+                    self.node_edge_list[gi2].append([edge_index, 1-vp])
 
             # If we are at an active vertex that is an outer node in the tree,
             # we need to update the instruction list.
@@ -949,177 +930,6 @@ class Bloss:
             # increase the edge index for the next edge
             edge_index += 1
 
-    def get_confidence(self):
-
-        '''
-        Takes a graph that has had a finished matching created on it,
-        and begins growing an alternating tree from one of the two
-        boundary vertices. Continues the tree until it has connected
-        to the other edge, ignoring all blossoms.
-        '''
-        # We grow this tree beyond finding a free node, so turn off the min-weight flag
-        self.mw_flag = False
-        # Make a tree with the root at 0
-        self.make_tree(root=0)
-
-        # For our purposes, we want all nodes paired with the root to be outer nodes as well
-        for node in range(2,len(self.node_weight_list)):
-            if self.blossom_list[node]:
-                continue
-            if self.pairing_list[node] != 0:
-                continue
-            self.outer_node_list.append(node)
-            self.tree_branch_list[node] = []
-            self.make_instructions(self.node_edge_list[node])
-
-        max_total_growth = None
-
-        self.confidence = 1
-
-        while True:
-
-            # Get next instruction from list
-            # This time we could well have an empty weight list,
-            # In which case we are done.
-            if self.instruction_list.empty():
-                break
-            if max_total_growth is not None and self.total_growth > max_total_growth:
-                break
-
-            ni = self.instruction_list.get()
-
-            # We have to validate the instruction before use.
-            # This is done in here; might want to shift?
-
-            #
-            # Collapse tree instruction
-            #
-
-            if ni[1] == 0:
-                # Get edge:
-                ep = ni[2]
-                vp = ni[3]
-                edge = self.edge_list[ep]
-                # check edge is active
-                if not edge[5]:
-                    continue
-
-                # check that this edge is pointing to the other boundary
-                if edge[3+vp] == 0 or (self.pairing_list[edge[3+vp]] and
-                                       self.pairing_list[edge[3+vp]][0] == 0):
-                    continue
-
-                # Grow to instruction if needed
-                if ni[0]-self.total_growth != 0:
-                    self.grow_no_tb(ni[0]-self.total_growth)
-
-                # We no longer collapse the tree here; rather, we add this
-                # as a decrease in confidence margin.
-                # The alternating path that we have created gives two options
-                # for being 'correct' - our confidence is multiplied by
-                # p_0/(p_0+p_1), where p_0 is the chosen configuration
-                # and p_1 is its logical opposite.
-
-                # If c_0 is the confidence that choice 0 is correct, and c_1
-                # is the confidence that choice 1 is correct, than the
-                # probability of them both being correct modulo 2 is
-                # c_0*c_1 + (1-c_0)*(1-c_1)
-                delta_conf = self.traceback_path(ep,vp)
-                self.confidence = self.confidence * delta_conf +\
-                    (1-self.confidence)*(1-delta_conf)
-
-            #
-            # Add to tree instruction
-            #
-
-            elif ni[1] == 1:
-                # This instruction is completed as long as the
-                # edge is active and the other node is not in inl
-                # Get edge
-                ep = ni[2]
-                vp = ni[3]
-                edge = self.edge_list[ep]
-                # Check edge is active:
-                if not edge[5]:
-                    continue
-                # If the other node is in onl or inl, we don't perform the
-                # instruction (analogous to marking the edge)
-                # Checking whether this node is in onl is for degenerate
-                # edge cases; it could be removed if we prioritised making
-                # blossoms over connecting edges, but best to be careful.
-                if edge[vp+3] in self.inner_node_list+self.outer_node_list:
-                    continue
-                #
-                # Grow to instruction if needed
-                #
-                if ni[0]-self.total_growth != 0:
-                    self.grow_no_tb(ni[0]-self.total_growth)
-                # Add to tree
-                self.add_to_tree(ep, vp)
-
-        self.mw_flag = True
-
-    def traceback_path(self, ep, vp):
-
-        # We trace a path back from boundary 1 along the tree_branch_list
-        # till it gets to boundary 0. Along the way we alternate between
-        # adding the weight to w0 or to w1 - this corresponds to calculating
-        # the corresponding probabilities of either path being filled.
-        # Then we calculate the relative likelihood that our choice was correct.
-
-        w0 = 0
-        w1 = 0
-
-        final_edge = self.edge_list[ep]
-        w1 += final_edge[0]
-
-        # ep points to an inner edge. If this does not lead to the
-        # boundary, then an outer edge must do, and must be added
-        # to the appropriate weight box
-        if final_edge[3+vp] != 1:
-            final_node = final_edge[3+vp]
-            extra_edge = self.edge_list[self.pairing_list[final_node][1]]
-            w0 += extra_edge[0]
-
-        even_v = final_edge[4-vp]
-
-        # Go through all nodes in branch till we hit the root.
-        # This is flagged by even_v not having a branch back
-        while self.tree_branch_list[even_v]:
-
-            # and step back twice
-            odd_v, ep, vp = self.tree_branch_list[even_v]
-            odd_edge = self.edge_list[ep]
-            w0 += odd_edge[0]
-
-            even_v, ep, vp = self.tree_branch_list[odd_v]
-            even_edge = self.edge_list[ep]
-            w1 += even_edge[0]
-
-        # If we're not back at boundary 0, then we have one last
-        # edge connecting there that needs to be added to the
-        # appropriate weight box.
-
-        if even_v != 0:
-            extra_edge = self.pairing_list[even_v][1]
-            w0 += extra_edge[0]
-
-        # Extract the probabilities of either combination of errors occurring
-        p0 = np.exp(-w0)
-        p1 = np.exp(-w1)
-
-        # Check that p1 < p0; if otherwise, then our blossom is incorrect
-        if p1 > p0:
-            raise ValueError('Apparently blossom has an alternating path that' +
-                             'would reduce the final weight - something is wrong')
-
-        # The confidence in our choice is the probability that it occurred
-        # Divided by the probability that this set of errors was seen.
-        confidence = p0 / (p1 + p0)
-
-        return confidence
-
-
     '''
     #######################################################################
     Below here are the mid-level algorithms; algorithms that are present in the
@@ -1127,7 +937,7 @@ class Bloss:
     #######################################################################
     '''
 
-    def make_tree(self, root=None):
+    def make_tree(self):
         '''
         Create new alternating tree taking the first vertex from the
         list of unpaired vertices.
@@ -1139,8 +949,7 @@ class Bloss:
         '''
 
         # Get tree root as the first vertex to be added that is not yet paired.
-        if root is None:
-            root = self.unpaired_list.popleft()
+        root = self.unpaired_list.popleft()
 
         # We might want to consider a quick check of the most likely outcome
         # i.e. that root pairs to another unpaired vertex immediately
@@ -1260,7 +1069,7 @@ class Bloss:
         # Quick fix to pairing list so that our root is now paired
         # to whatever our blossom is paired to - note that our
         # blossom must be paired to a vertex that is not the root
-        # or the time boundary, as it is the inner node in a tree
+        # or the time boundary!
         paired_node, ep = self.pairing_list[v]
         self.pairing_list[root] = [paired_node, ep]
         self.pairing_list[paired_node] = [root, ep]
@@ -1317,7 +1126,7 @@ class Bloss:
         # If blossom, insert break instruction into il
         if self.cycle_list[v_out] and self.node_weight_list[v_out] + self.total_growth < self.weight_cap+self._err:
             inst = [self.node_weight_list[v_out]+self.total_growth, 3, v_out]
-            self.instruction_list.put(inst) 
+            self.instruction_list.put(inst)
         node_weight = self.node_weight_list[v_out]
         for ep, vp in self.node_edge_list[v_out]:
             # Need to update effective weights for
@@ -1532,7 +1341,7 @@ class Bloss:
             self.pairing_list[root] = [paired_node, ep]
 
             # Note that we do not pair the boundary to anything!
-            if paired_node > 1:
+            if paired_node != 0:
                 self.pairing_list[paired_node] = [root, ep]
         else:
             # If we have no pairing, this vertex will
@@ -1613,6 +1422,7 @@ class Bloss:
 
         # Get edge, new node, and old node
         edge = self.edge_list[ep]
+
         new_inner_node = edge[3+vp]
         old_node = edge[4-vp]
 
@@ -1692,7 +1502,7 @@ class Bloss:
 
         # Remove odd_v from the unpaired vertex list if there.
         if not self.pairing_list[odd_v] and \
-           odd_v > 1 and (not self.time_boundary or
+           odd_v != 0 and (not self.time_boundary or
                            odd_v != self.time_boundary):
             self.unpaired_list.remove(odd_v)
 
@@ -1895,12 +1705,12 @@ class Bloss:
         edge = self.edge_list[ep]
         w, v1, v2, n1, n2, active = edge
 
-        if n1 > 1 and (not self.time_boundary or n1 != self.time_boundary):
+        if n1 != 0 and (not self.time_boundary or n1 != self.time_boundary):
             self.pairing_list[n1] = [n2, ep]
             self.pairing_real_list[self.reverse_index_list[v1]] = \
                 self.reverse_index_list[v2]
 
-        if n2 > 1 and (not self.time_boundary or n2 != self.time_boundary):
+        if n2 != 0 and (not self.time_boundary or n2 != self.time_boundary):
             self.pairing_list[n2] = [n1, ep]
             self.pairing_real_list[self.reverse_index_list[v2]] = \
                 self.reverse_index_list[v1]
@@ -2079,8 +1889,8 @@ class Bloss:
                     while self.blossom_list[top_node]:
                         top_node = self.blossom_list[top_node]
                     if top_node in cycle:
+                        edge[5] = False
                         continue
-
                 # See if another edge to this node already exists
                 if lowest_weight_list[other_vertex] is not None:
 
@@ -2111,16 +1921,14 @@ class Bloss:
                         # Insert
                         self.edge_list[pep][5] = False
 
-                        # Update node edge list with our new edge
-                        # (no appending needed)
+                        # Update node edge list with our new edge (no appending needed)
                         self.node_edge_list[nbi][edge_index] = [ep, vp]
 
                         # Update the weight associated to this node.
                         lowest_weight_list[other_vertex] = eff_weight
 
                     # Strictly less than
-                    elif eff_weight < lowest_weight_list[other_vertex]\
-                                    - self._err:
+                    elif eff_weight < lowest_weight_list[other_vertex]-self._err:
 
                         # Get the index this was inserted at
                         edge_index = edge_index_list[other_vertex]
@@ -2131,8 +1939,7 @@ class Bloss:
                         # Insert
                         self.edge_list[pep][5] = False
 
-                        # Update node edge list with our new edge
-                        # (no appending needed)
+                        # Update node edge list with our new edge (no appending needed)
                         self.node_edge_list[nbi][edge_index] = [ep, vp]
 
                         # Update the weight associated to this node.
@@ -2151,9 +1958,7 @@ class Bloss:
                     self.node_edge_list[nbi].append([ep, vp])
 
                     # Update the lowest_weight_list and edge_index_list
-                    eff_weight = edge[0] - self.node_weight_list[node] -\
-                                           self.node_weight_list[other_node]
-
+                    eff_weight = edge[0] - self.node_weight_list[node] - self.node_weight_list[other_node]
                     while self.blossom_list[other_node]:
                         other_node = self.blossom_list[other_node]
                         eff_weight -= self.node_weight_list[other_node]
@@ -2203,9 +2008,7 @@ class Bloss:
             if other_node in self.inner_node_list:
                 continue
 
-            weight = edge[0] - self.node_weight_list[other_node] \
-                             - self.node_weight_list[this_node]
-
+            weight = edge[0] - self.node_weight_list[other_node] - self.node_weight_list[this_node]
             if other_node in self.outer_node_list:
                 outer_flag = True
                 weight = weight / 2
@@ -2215,20 +2018,15 @@ class Bloss:
             weight += self.total_growth
 
             # Check against weight cap
-            if self.weight_cap and not(self.mw_flag) and weight > self.weight_cap+self._err:
+            if self.weight_cap and weight > self.weight_cap+self._err:
                 continue
 
             # Determine instruction type
             if outer_flag:  # Make blossom instruction
                 inst = [weight, 2, ep, vp]
-            elif self.pairing_list[self.edge_list[ep][3+vp]] and\
-                    self.pairing_list[self.edge_list[ep][3+vp]][0] > 1 and\
-                    self.pairing_list[self.edge_list[ep][3+vp]][0] !=\
-                    self.time_boundary:  # Add to tree instruction
-
+            elif self.pairing_list[self.edge_list[ep][3+vp]] and self.pairing_list[self.edge_list[ep][3+vp]][0] != 0 and self.pairing_list[self.edge_list[ep][3+vp]][0] != self.time_boundary:  # Add to tree instruction
                 inst = [weight, 1, ep, vp]
             else:  # Collapse tree instruction - update weight cap
                 inst = [weight, 0, ep, vp]
                 self.weight_cap = weight
-
             self.instruction_list.put(inst)

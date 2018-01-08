@@ -58,7 +58,8 @@ final_data_qubit_error_function = split.final_readout_data_qubit_errors
 
 
 def run(t1, t2, t_cycle, pm, symm_flag, distance,
-        max_lookback, *, x_correction_flag=False):
+        max_lookback, *, x_correction_flag=False,
+        two_column_flag=False):
     '''
     Calculate probabilities for all different edges in our matrix,
     convert to weights. Note that in combining probabilities here
@@ -104,7 +105,8 @@ def run(t1, t2, t_cycle, pm, symm_flag, distance,
     correction_matrix = matrix_dic['correction_matrix']
 
     # Combine separated matrices into the final product
-    weight_matrix, boundary_vec = combine_matrices(matrix_dic, max_lookback)
+    weight_matrix, boundary_vec = combine_matrices(matrix_dic, max_lookback,
+                                                   two_column_flag)
 
     # Generate weight matrices from graph error rates and return
     return weight_matrix, boundary_vec, correction_matrix
@@ -748,7 +750,7 @@ def get_A_bound_mat_X(circuit, distance, X_pos_list, X_name_list,
     return(A_bound_mat_X)
 
 
-def combine_matrices(matrix_dic, max_lookback):
+def combine_matrices(matrix_dic, max_lookback, two_column_flag):
 
     # Get large matrix dimensions.
     #
@@ -861,6 +863,8 @@ def combine_matrices(matrix_dic, max_lookback):
                                :num_ancillas].dot(boundary_A_mat)
 
     boundary_vec = -np.log(boundary_P_mat[:num_ancillas, :])
+    if two_column_flag is False:
+        boundary_vec = [min(v) for v in boundary_vec]
 
     return weight_matrix, boundary_vec
 

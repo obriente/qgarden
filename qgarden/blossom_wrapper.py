@@ -1,10 +1,6 @@
 ''' blossom_wrapper: a wrapper for the blossom algorithm written
 for this package.
 
-(c) 2017 Thomas O'Brien
-Distributed under the GNU GPLv3. See LICENSE.txt or
-https://www.gnu.org/licenses/gpl.txt
-
 The blossom algorithm used in the qec package is written to integrate
 with the gardener that sits over the top of it. The following provides
 a wrapper for people who want to use this implementation of blossom

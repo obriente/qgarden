@@ -2,9 +2,7 @@
 weight_gen_simple: A simple version of weight generation, using
 the error model of arXiv:1705.07855.
 
-(c) 2017 Thomas O'Brien
-Distributed under the GNU GPLv3. See LICENSE.txt or
-https://www.gnu.org/licenses/gpl.txt
+Written by Tom O'Brien
 
 Please note that this is not exactly the same algorithm
 as that used in arXiv:1705.07855v1; it has been revamped to fit

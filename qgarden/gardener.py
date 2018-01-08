@@ -1,9 +1,5 @@
 '''Gardener: a wrapper for a blossom algorithm.
 
-(c) 2017 Thomas O'Brien
-Distributed under the GNU GPLv3. See LICENSE.txt or
-https://www.gnu.org/licenses/gpl.txt
-
 Written by Tom O'Brien, with much consultation from Brian Tarasinski.
 
 In order to do accurate error correction for a quantum computer
@@ -221,11 +217,6 @@ class Gardener:
         except:
             self.time_boundary_weight -= 0.1
 
-        try:
-            self.two_boundaries_flag = kwargs['two_boundaries_flag']
-        except:
-            self.two_boundaries_flag = False
-
         # Reset prepares the gardener for input. We perform it here
         # so that the user doesn't have to reset before using this.
         self.reset()
@@ -434,7 +425,6 @@ class Gardener:
         for error in error_list:
             weight_list = self.get_weights(error=error,
                                            final_flag=0)
-
             self.graph.add_vertex(weight_list)
 
         # Runs blossom till it halts
@@ -444,8 +434,7 @@ class Gardener:
                final_stabilizers,
                stab_index_left,
                stab_index_right,
-               continue_flag=True,
-               confidence_flag=False):
+               continue_flag=True):
         '''Finish running blossom and return the most likely correction.
 
         Input:
@@ -500,7 +489,6 @@ class Gardener:
         error_list = self.get_new_errors_final(syndromedd,
                                                stab_index_left,
                                                stab_index_right)
-
         # If there is nothing to correct, do nothing
         if self.num_errors == 0:
             return res
@@ -524,25 +512,19 @@ class Gardener:
 
         # Runs blossom till it halts
         pairing = self.graph.finish(boundary_list=None,
-                                    weight_lists=weight_lists,
-                                    c_flag=continue_flag,
-                                    confidence_flag=confidence_flag)
-
-        if confidence_flag:
-            self.confidence = self.graph.confidence
-
+                                         weight_lists=weight_lists,
+                                         c_flag=continue_flag)
         for index, pair in zip(range(len(pairing)), pairing):
-
             if pair is None:
                 continue
 
-            if pair < 1:  # Connection to the boundary
-                ancilla_index = (self.full_error_list[index-2][0])
+            if pair == 0:  # Connection to the boundary
+                ancilla_index = (self.full_error_list[index-1][0])
                 pair_index = -1
 
             elif pair < index:  # Connection between two ancillas
-                ancilla_index = (self.full_error_list[index-2][0])
-                pair_index = self.full_error_list[pair-2][0]
+                ancilla_index = (self.full_error_list[index-1][0])
+                pair_index = self.full_error_list[pair-1][0]
 
             else:
                 continue
@@ -555,8 +537,8 @@ class Gardener:
         if self.only_final_flag:
             # Runs blossom till it halts
             pairing = self.graph.finish(boundary_list=None,
-                                        weight_lists=[],
-                                        c_flag=continue_flag)
+                                             weight_lists=[],
+                                             c_flag=continue_flag)
 
             for index, pair in zip(range(len(pairing)), pairing):
                 if pair is None:
@@ -675,30 +657,14 @@ class Gardener:
         # Initialize weight list with boundary error, and get appropriate
         # weight matrix
         if final_flag == 1:
-
-            # Init weight list with boundary connection
-            if self.two_boundaries_flag:
-                weight_list = [(0, self.boundary_vec_final[error, 0]),
-                               (1, self.boundary_vec_final[error, 1])]
-            else:
-                weight_list = [(0, self.boundary_vec_final[error])]
-
-            # Choose appropriate weight matrix
+            weight_list = [(0, self.boundary_vec_final[error])]
             if self.weight_calculation_method == 'partial_weight_matrix':
                 pmat = kwargs['final_pmat']
             else:
                 pmat = self.weight_matrix_final
 
         elif final_flag == 0:
-
-            # Init weight list with boundary connection
-            if self.two_boundaries_flag:
-                weight_list = [(0, self.boundary_vec[error, 0]),
-                               (1, self.boundary_vec[error, 1])]
-            else:
-                weight_list = [(0, self.boundary_vec[error])]
-
-            # Choose appropriate weight matrix
+            weight_list = [(0, self.boundary_vec[error])]
             if self.weight_calculation_method == 'partial_weight_matrix':
                 pmat = self.P_mat
             else:
@@ -737,7 +703,7 @@ class Gardener:
             if weight > self.max_weight:
                 continue
             # Append to list.
-            weight_list.append((gi2+2, weight))
+            weight_list.append((gi2+1, weight))
         return weight_list
 
     def update_Pmats(self, syndrome):
