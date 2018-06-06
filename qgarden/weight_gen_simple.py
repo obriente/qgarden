@@ -143,7 +143,7 @@ def gen_pos_lists(d):
 
     Z_pos_list = [(m, n*2 + (m-1) % 2) for m in range(1, d)
                   for n in range(0, (d+1)//2)]
-    X_pos_list = [(m, n+2 - m % 2)for n in range(0, (d-1)//2)
+    X_pos_list = [(m, n*2 - m % 2)for n in range(0, (d-1)//2)
                   for m in range(0, d+1)]
 
     return Z_pos_list, X_pos_list

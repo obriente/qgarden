@@ -23,10 +23,9 @@ reload(gardener)
 reload(weight_gen)
 
 
-def run(data, distance, max_lookback, num_ancillas,
-        weight_matrix, boundary_vec, correction_matrix,
-        stab_index_left, stab_index_right,
-        continuous_flag=True, deriv_flag=2, tbw_tol=0.1):
+def run(data, distance, max_lookback, px, py, pz, pm, *,
+        x_correction_flag=False, continuous_flag=True,
+        deriv_flag=2, tbw_tol=0.1):
 
     '''
     input:
@@ -68,6 +67,25 @@ def run(data, distance, max_lookback, num_ancillas,
     @ tbw_tol: the tolerance on the time boundary weight calculation
         made in the gardener.
     '''
+
+    # Calculate number of ancilla qubits from the code distance
+    nX = (distance**2 - 1) // 2
+    nZ = nX
+    num_ancillas = nX + nZ
+
+    # Calculate position of final stabilizer measurements
+    if x_correction_flag is True:
+        stab_index_left = nZ
+        stab_index_right = num_ancillas
+    else:
+        stab_index_left = 0
+        stab_index_right = nZ
+
+    # Get weight and correction data from the weight generation function
+    weight_matrix, boundary_vec, correction_matrix =\
+        weight_gen.run(px=px, py=py, pz=pz, pm=pm, distance=distance,
+                       max_lookback=max_lookback,
+                       x_correction_flag=x_correction_flag)
 
     # Initialize gardener
     gard = gardener.Gardener(correction_matrix=correction_matrix,
