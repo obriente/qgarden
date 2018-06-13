@@ -9,7 +9,8 @@ Licensed under the GNU GPL 3.0
 from .weight_gen_simple import get_correction_matrix
 from .weights_moving_average import weights_moving_average
 
-def run(distance, max_lookback, training_data, pval=0.001):
+
+def run(distance, max_lookback, training_data, many_sets=False):
 
     def gen_pos_lists(d):
 
@@ -20,29 +21,38 @@ def run(distance, max_lookback, training_data, pval=0.001):
         data qubits within the arrays.
         '''
 
-        Z_pos_list = [(2*n + 1 + m%2, m) for m in range(0, d+1)
+        Z_pos_list = [(2*n + 1 + m % 2, m) for m in range(0, d+1)
                       for n in range(0, (d-1)//2)]
-        X_pos_list = [(2*n + m%2, m) for m in range(1, d) 
+        X_pos_list = [(2*n + m % 2, m) for m in range(1, d)
                       for n in range(0, (d+1)//2)]
 
         return Z_pos_list, X_pos_list
 
     pos_lists = gen_pos_lists(distance)
-    
+
     correction_matrix_X = get_correction_matrix(
         *pos_lists, x_correction_flag=True, distance=distance)
     correction_matrix_Z = get_correction_matrix(
         *pos_lists, x_correction_flag=False, distance=distance)
 
     num_anc = distance**2-1
-    #Generate weight matrices from training dataset
+
+    # Generate weight matrices from training dataset
     weight_matrix_object = \
-        weights_moving_average(num_anc,max_lookback,len(training_data),pval)
+        weights_moving_average(num_anc, max_lookback,
+                               sum([len(x) for x in training_data]))
 
-    for cycle, syndrome in enumerate(training_data):
+    if many_sets is False:
+        training_data = [training_data]
 
-        # Update weight matrices
-        weight_matrix_object.update_syndrome(syndrome)
+    for dset in training_data:
+
+        weight_matrix_object.new_syndrome()
+
+        for syndrome in dset:
+
+            # Update weight matrices
+            weight_matrix_object.update_syndrome(syndrome)
 
     weight_matrix, boundary_vec = weight_matrix_object.return_weight_matrix()
 

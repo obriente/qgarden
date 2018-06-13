@@ -514,6 +514,8 @@ class Gardener:
         pairing = self.graph.finish(boundary_list=None,
                                          weight_lists=weight_lists,
                                          c_flag=continue_flag)
+
+
         for index, pair in zip(range(len(pairing)), pairing):
             if pair is None:
                 continue
@@ -528,7 +530,6 @@ class Gardener:
 
             else:
                 continue
-
             res = res ^ self.correction_matrix[ancilla_index, pair_index]
 
         # For machine learning decoders, it is needed to see the difference
