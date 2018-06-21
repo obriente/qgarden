@@ -431,10 +431,13 @@ class Gardener:
         self.graph.run()
 
     def result(self,
-               final_stabilizers,
-               stab_index_left,
-               stab_index_right,
-               continue_flag=True):
+               boundary_switch=1,
+               cm_list=None,
+               continue_flag=False,
+               final_stabilizers=None,
+               syndromedd=None,
+               stab_index_left=None,
+               stab_index_right=None):
         '''Finish running blossom and return the most likely correction.
 
         Input:
@@ -442,104 +445,117 @@ class Gardener:
             from explicit readout of the data qubits.
         stab_index_left, stab_index_right: the slice of self.syndromes
             corresponding to the final stabilizers
-        continue_flag: a flag to check whether the experiment will be
-            continued. If this is the case, we need to return the entire
-            gardener to its original state at the end of the calculation.
+        boundary_switch: either 0, 1, 2:
+            0 - calculates without final stabilizers
+            1 - calculates with final stabilizers
+            2 - calculates both
+        cm1, cm2: optional alternative correction matrices.
 
         Output:
         res: the logical error bitflip bit.
         '''
-        # Sanitize input
-        final_stabilizers = [int(x) for x in final_stabilizers]
+        if cm_list is None:
+            cm_list = [self.correction_matrix] * self.timestep
 
-        res = 0
+        if boundary_switch > 0:
 
-        # Check for any last errors, and add them as necessary to the graph.
-        # Determine if any errors in the final round exist
-        if self.deriv_flag == 0:
-            # This is a special case, where we have been performing
-            # feedback to drive ancilla qubits into the ground state,
-            # and as such have to store the current stabilizer separately.
-            curr_stab = self.current_stabilizers[stab_index_left:
-                                                 stab_index_right]
+            # Sanitize input
+            final_stabilizers = [int(x) for x in final_stabilizers]
 
-        elif self.deriv_flag == 1:
-            # This is the case with ancilla reset, and so the syndromes
-            # measure the actual stabilizers.
-            curr_stab = self.syndromes[stab_index_left:stab_index_right]
+            res = 0
 
-        elif self.deriv_flag == 2:
+            # Check for any last errors, and add them as necessary to the
+            # graph. Determine if any errors in the final round exist
+            if self.deriv_flag == 0:
+                # This is a special case, where we have been performing
+                # feedback to drive ancilla qubits into the ground state,
+                # and as such have to store the current stabilizer separately.
+                curr_stab = self.current_stabilizers[stab_index_left:
+                                                     stab_index_right]
 
-            # This is the case with no ancilla reset, and so the stabilizers
-            # are measured in the difference between the ancilla measurements.
-            curr_syn = self.syndromes[stab_index_left:stab_index_right]
-            prev_syn = self.syndromes[self.num_ancillas +
-                                      stab_index_left:
-                                      self.num_ancillas +
-                                      stab_index_right]
+            elif self.deriv_flag == 1:
+                # This is the case with ancilla reset, and so the syndromes
+                # measure the actual stabilizers.
+                curr_stab = self.syndromes[stab_index_left:stab_index_right]
 
-            curr_stab = [x ^ y for x, y in zip(curr_syn, prev_syn)]
+            elif self.deriv_flag == 2:
 
-        # Final errors come from the difference between the directly
-        # measured stabilizers and the stabilizers measured indirectly
-        # in previous rounds.
-        syndromedd = [x ^ y for x, y in zip(final_stabilizers, curr_stab)]
+                # This is the case with no ancilla reset, and so the
+                # stabilizers are measured in the difference between the
+                # ancilla measurements.
+                curr_syn = self.syndromes[stab_index_left:stab_index_right]
+                prev_syn = self.syndromes[self.num_ancillas +
+                                          stab_index_left:
+                                          self.num_ancillas +
+                                          stab_index_right]
 
-        # Use the same functions as in update to insert errors
-        error_list = self.get_new_errors_final(syndromedd,
-                                               stab_index_left,
-                                               stab_index_right)
-        # If there is nothing to correct, do nothing
-        if self.num_errors == 0:
-            return res
+                curr_stab = [x ^ y for x, y in zip(curr_syn, prev_syn)]
 
-        # Update weight matrices
-        # Note that the chance of an error occurring on an ancilla in this
-        # time step is dependent on the state of the ancilla in the *previous*
-        # time step.
-        if self.weight_calculation_method == 'partial_weight_matrix':
-            pmat = self.get_Pmats_final(self.syndromes[:self.num_ancillas])
-        else:
-            pmat = None
+            # Final errors come from the difference between the directly
+            # measured stabilizers and the stabilizers measured indirectly
+            # in previous rounds.
+            if syndromedd is None:
+                syndromedd = [x ^ y for x, y in zip(final_stabilizers,
+                                                    curr_stab)]
 
-        # Compound weight lists
-        weight_lists = []
-        for error in error_list:
-            weight_list = self.get_weights(error=error,
-                                           final_flag=1,
-                                           final_pmat=pmat)
-            weight_lists.append(weight_list)
+            # Use the same functions as in update to insert errors
+            error_list = self.get_new_errors_final(syndromedd,
+                                                   stab_index_left,
+                                                   stab_index_right)
+            # If there is nothing to correct, do nothing
+            if self.num_errors > 0:
 
-        # Runs blossom till it halts
-        pairing = self.graph.finish(boundary_list=None,
-                                         weight_lists=weight_lists,
-                                         c_flag=continue_flag)
+                # Update weight matrices
+                # Note that the chance of an error occurring on an ancilla in
+                # this time step is dependent on the state of the ancilla in
+                # the *previous* time step.
+                if self.weight_calculation_method == 'partial_weight_matrix':
+                    pmat = self.get_Pmats_final(
+                        self.syndromes[:self.num_ancillas])
+                else:
+                    pmat = None
 
+                # Compound weight lists
+                weight_lists = []
+                for error in error_list:
+                    weight_list = self.get_weights(error=error,
+                                                   final_flag=1,
+                                                   final_pmat=pmat)
+                    weight_lists.append(weight_list)
 
-        for index, pair in zip(range(len(pairing)), pairing):
-            if pair is None:
-                continue
+                # Runs blossom till it halts
+                pairing = self.graph.finish(boundary_list=None,
+                                            weight_lists=weight_lists,
+                                            c_flag=continue_flag)
 
-            if pair == 0:  # Connection to the boundary
-                ancilla_index = (self.full_error_list[index-1][0])
-                pair_index = -1
+                for index, pair in zip(range(len(pairing)), pairing):
+                    if pair is None:
+                        continue
 
-            elif pair < index:  # Connection between two ancillas
-                ancilla_index = (self.full_error_list[index-1][0])
-                pair_index = self.full_error_list[pair-1][0]
+                    if pair == 0:  # Connection to the boundary
+                        ancilla_index = (self.full_error_list[index-1][0])
+                        pair_index = -1
+                        timestep = self.full_error_list[index-1][1]
 
-            else:
-                continue
-            res = res ^ self.correction_matrix[ancilla_index, pair_index]
+                    elif pair < index:  # Connection between two ancillas
+                        ancilla_index = (self.full_error_list[index-1][0])
+                        pair_index = self.full_error_list[pair-1][0]
+                        timestep = min(self.full_error_list[pair-1][1],
+                                       self.full_error_list[index-1][1])
 
-        # For machine learning decoders, it is needed to see the difference
-        # between including the final step and not including the final step.
-        # This is done here if only_final_flag == True.
-        if self.only_final_flag:
+                    else:
+                        continue
+
+                    res = res ^ cm_list[timestep][ancilla_index, pair_index]
+
+        if boundary_switch != 1:
+
+            res2 = 0
+
             # Runs blossom till it halts
             pairing = self.graph.finish(boundary_list=None,
-                                             weight_lists=[],
-                                             c_flag=continue_flag)
+                                        weight_lists=[],
+                                        c_flag=continue_flag)
 
             for index, pair in zip(range(len(pairing)), pairing):
                 if pair is None:
@@ -548,23 +564,30 @@ class Gardener:
                 if pair == 0:  # Connection to the boundary
                     ancilla_index = self.full_error_list[index-1][0]
                     pair_index = -1
+                    timestep = self.full_error_list[index-1][1]
 
                 elif pair < index:  # Connection between two ancillas
                     ancilla_index = self.full_error_list[index-1][0]
                     pair_index = self.full_error_list[pair-1][0]
+                    timestep = min(self.full_error_list[pair-1][1],
+                                   self.full_error_list[index-1][1])
 
                 else:
                     continue
 
-                res = res ^ self.correction_matrix[ancilla_index,
-                                                         pair_index]
+                res2 = res2 ^ cm_list[timestep][ancilla_index, pair_index]
 
         # Undo any damage done by final measurement
         if final_stabilizers and continue_flag and len(error_list) > 0:
             del self.full_error_list[-len(error_list):]
             self.num_errors -= len(error_list)
 
-        return res
+        if boundary_switch == 0:
+            return res2
+        elif boundary_switch == 1:
+            return res
+        else:
+            return res, res2
 
     def update_syndrome(self, syndrome):
         '''Stores syndrome, takes second derivative, returns
