@@ -362,8 +362,7 @@ class Gardener:
         '''
 
         if self.deriv_flag == 0:
-            self.current_stabilizers = [[0]*self.num_ancillas
-                                        for x in range(self.num_graphs)]
+            self.current_stabilizers = [0]*self.num_ancillas
 
         # Reset graph
         self.graph = bl.Bloss(self.time_boundary_weight)
