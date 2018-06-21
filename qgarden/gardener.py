@@ -454,7 +454,7 @@ class Gardener:
         res: the logical error bitflip bit.
         '''
         if cm_list is None:
-            cm_list = [self.correction_matrix] * self.timestep
+            cm_list = [self.correction_matrix] * (self.timestep+1)
 
         if boundary_switch > 0:
 
