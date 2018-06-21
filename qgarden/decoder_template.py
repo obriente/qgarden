@@ -25,7 +25,7 @@ reload(weight_gen)
 
 def run(data, distance, max_lookback, num_ancillas,
         weight_matrix, boundary_vec, correction_matrix,
-        stab_index_left, stab_index_right,
+        stab_index_left, stab_index_right, fstab_as_deriv=False,
         continuous_flag=True, deriv_flag=2, tbw_tol=0.1):
 
     '''
@@ -104,10 +104,16 @@ def run(data, distance, max_lookback, num_ancillas,
             # continue flag to false, as we will not re-use the data,
             # which saves us from having to store and restore the gardener
             # state.
-            result.append(gard.result(final_stabilizers=final_stabilizers,
-                                      stab_index_left=stab_index_left,
-                                      stab_index_right=stab_index_right,
-                                      continue_flag=False))
+            if fstab_as_deriv:
+                result.append(gard.result(syndromedd=final_stabilizers,
+                                          stab_index_left=stab_index_left,
+                                          stab_index_right=stab_index_right,
+                                          continue_flag=False))
+            else:
+                result.append(gard.result(final_stabilizers=final_stabilizers,
+                                          stab_index_left=stab_index_left,
+                                          stab_index_right=stab_index_right,
+                                          continue_flag=False))
 
         else:
 
