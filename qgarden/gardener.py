@@ -458,9 +458,6 @@ class Gardener:
 
         if boundary_switch > 0:
 
-            # Sanitize input
-            final_stabilizers = [int(x) for x in final_stabilizers]
-
             res = 0
 
             # Check for any last errors, and add them as necessary to the
@@ -494,6 +491,8 @@ class Gardener:
             # measured stabilizers and the stabilizers measured indirectly
             # in previous rounds.
             if syndromedd is None:
+                # Sanitize input
+                final_stabilizers = [int(x) for x in final_stabilizers]
                 syndromedd = [x ^ y for x, y in zip(final_stabilizers,
                                                     curr_stab)]
 
@@ -577,7 +576,7 @@ class Gardener:
                 res2 = res2 ^ cm_list[timestep][ancilla_index, pair_index]
 
         # Undo any damage done by final measurement
-        if final_stabilizers and continue_flag and len(error_list) > 0:
+        if continue_flag and len(error_list) > 0:
             del self.full_error_list[-len(error_list):]
             self.num_errors -= len(error_list)
 
