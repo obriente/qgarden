@@ -76,6 +76,7 @@ def run(data, distance, logical_dic, max_lookback, num_ancillas,
         syndromes, final_stabilizers, logicals = experiment
 
         logical_Z = 'Z'
+        measurement_Z = 'MZ'
         cm_list = []
 
         # Loop over syndromes, inserting each into the gardener
@@ -83,6 +84,7 @@ def run(data, distance, logical_dic, max_lookback, num_ancillas,
             gard.update(syndrome)
 
             logical_Z = logical_dic[logical][logical_Z]
+            measurement_Z = logical_dic[logical][measurement_Z]
             cm_list.append(correction_matrices[logical_Z])
         cm_list.append(correction_matrices[logical_Z])
 
@@ -90,10 +92,10 @@ def run(data, distance, logical_dic, max_lookback, num_ancillas,
         # continue flag to false, as we will not re-use the data,
         # which saves us from having to store and restore the gardener
         # state.
-        if logical_Z == 'Z':
+        if measurement_Z == 'MZ':
             sil = stab_index_left
             sir = stab_index_right
-        elif logical_Z == 'X':
+        elif measurement_Z == 'MX':
             sil = stab_index_left + num_ancillas//2
             sir = stab_index_right + num_ancillas//2
         else:
