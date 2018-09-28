@@ -5,31 +5,31 @@ technique described in arxiv:1712.02360
 Author: Stephen Spitz, minor adjustments by Tom O'Brien
 Licensed under the GNU GPL 3.0
 '''
-
-import numpy as np
 from math import sqrt, log
+import numpy as np
 
 
 class weights_moving_average(object):
 
-    def __init__(self, num_anc, lookback, window, max_dist, code_layout):
-        self.num_anc = num_anc
-        self.x_group = [x for x in range(0, int(num_anc/2))]
-        self.z_group = [z for z in range(int(num_anc/2), num_anc)]
+    def __init__(self, lookback, window, max_dist, code_layout):
+        self.code_layout = code_layout
+        self.num_anc = self.code_layout.get_num_anc()
         self.lookback = lookback
         self.window = window
         self.max_dist = max_dist
-        self.code_layout = code_layout
 
-        self.measurement_matrix = np.zeros(shape=(2, num_anc))
+        self.measurement_matrix = np.zeros(shape=(2, self.num_anc))
         self.syndrome_matrices = [np.array([])]
 
-        self.xor_matrix = np.zeros(shape=(lookback, num_anc, num_anc))
-        self.and_matrix = np.zeros(shape=(lookback, num_anc, num_anc))
+        self.xor_matrix = np.zeros(
+            shape=(lookback, self.num_anc, self.num_anc))
+        self.and_matrix = np.zeros(
+            shape=(lookback, self.num_anc, self.num_anc))
 
-        self.var_matrix = np.zeros(shape=(lookback, num_anc, num_anc))
-        self.qmat = np.zeros(shape=(lookback, num_anc, num_anc))
-        self.boundary_q = np.zeros(shape=(num_anc))
+        self.var_matrix = np.zeros(
+            shape=(lookback, self.num_anc, self.num_anc))
+        self.qmat = np.zeros(shape=(lookback, self.num_anc, self.num_anc))
+        self.boundary_q = np.zeros(shape=(self.num_anc))
         self.num_measurements = 0
 
     def new_syndrome(self):

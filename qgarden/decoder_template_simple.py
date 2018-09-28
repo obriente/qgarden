@@ -18,15 +18,15 @@ todo: Currently we assume a square surface, this could be easily changed.
 
 from . import gardener
 from . import weight_gen_simple as weight_gen
+from .code_layout import CodeLayout
 from importlib import reload
 reload(gardener)
 reload(weight_gen)
 
 
-def run(data, distance, max_lookback, px, py, pz, pm, *,
+def run(data, distance, max_lookback, px, py, pz, pm, anc_pos_data, *,
         x_correction_flag=False, continuous_flag=True,
         deriv_flag=2, tbw_tol=0.1):
-
     '''
     input:
     @ data: list of individual syndromes from a series of experiments
@@ -67,28 +67,32 @@ def run(data, distance, max_lookback, px, py, pz, pm, *,
     @ tbw_tol: the tolerance on the time boundary weight calculation
         made in the gardener.
     '''
+    code_layout = CodeLayout(anc_pos_data)
 
-    # Calculate number of ancilla qubits from the code distance
-    nX = (distance**2 - 1) // 2
-    nZ = nX
-    num_ancillas = nX + nZ
+    code_layout = CodeLayout(anc_pos_data)
+
+    x_anc = code_layout.get_x_stabs()
+    z_anc = code_layout.get_z_stabs()
+
+    num_x_anc = len(x_anc)
+    num_z_anc = len(z_anc)
+    num_ancillas = num_x_anc + num_z_anc
 
     # Calculate position of final stabilizer measurements
     if x_correction_flag is True:
-        stab_index_left = nZ
-        stab_index_right = num_ancillas
+        stab_index_left = x_anc[0]
+        stab_index_right = x_anc[-1]
     else:
-        stab_index_left = 0
-        stab_index_right = nZ
+        stab_index_left = z_anc[0]
+        stab_index_right = z_anc[-1]
 
     # Get weight and correction data from the weight generation function
-    weight_matrix, boundary_vec, correction_matrix =\
+    weight_matrix, boundary_vec =\
         weight_gen.run(px=px, py=py, pz=pz, pm=pm, distance=distance,
-                       max_lookback=max_lookback,
-                       x_correction_flag=x_correction_flag)
+                       max_lookback=max_lookback)
 
     # Initialize gardener
-    gard = gardener.Gardener(correction_matrix=correction_matrix,
+    gard = gardener.Gardener(code_layout=code_layout,
                              num_ancillas=num_ancillas,
                              max_lookback=max_lookback,
                              weight_calculation_method='weight_matrix',
@@ -139,9 +143,9 @@ def run(data, distance, max_lookback, px, py, pz, pm, *,
 
                 # Small fix for current datasets, as the X
                 # and the Z ancillas have been switched around.
-                temp = list(syndrome[:nZ])
-                syndrome[:nZ] = list(syndrome[nZ:])
-                syndrome[nZ:] = temp
+                #temp = list(syndrome[:nZ])
+                #syndrome[:nZ] = list(syndrome[nZ:])
+                #syndrome[nZ:] = temp
 
                 # Insert single slice of syndrome into gardener
                 gard.update(syndrome)

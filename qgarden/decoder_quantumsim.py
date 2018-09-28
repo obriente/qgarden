@@ -11,15 +11,15 @@ This is currently restricted to Surface-17 as a result.
 
 from . import gardener
 from . import weight_gen_quantumsim as weight_gen
+from .code_layout import CodeLayout
 from importlib import reload
 reload(gardener)
 reload(weight_gen)
 
 
 def run(data, distance, max_lookback, t1, t2, t_cycle, pm,
-        symm_flag, *, x_correction_flag=False, continuous_flag=True,
+        symm_flag, anc_pos_data, *, x_correction_flag=False, continuous_flag=True,
         deriv_flag=2, tbw_tol=0.1, confidence_flag=False):
-
     '''
     input:
     @ data: list of individual syndromes from a series of experiments
@@ -61,26 +61,30 @@ def run(data, distance, max_lookback, t1, t2, t_cycle, pm,
         made in the gardener.
     '''
 
-    # Calculate number of ancilla qubits from the code distance
-    nX = (distance**2 - 1) // 2
-    nZ = nX
-    num_ancillas = nX + nZ
+    code_layout = CodeLayout(anc_pos_data)
+
+    x_anc = code_layout.get_x_stabs()
+    z_anc = code_layout.get_z_stabs()
+
+    num_x_anc = len(x_anc)
+    num_z_anc = len(z_anc)
+    num_ancillas = num_x_anc + num_z_anc
 
     # Calculate position of final stabilizer measurements
     if x_correction_flag is True:
-        stab_index_left = nZ
-        stab_index_right = num_ancillas
+        stab_index_left = x_anc[0]
+        stab_index_right = x_anc[-1]
     else:
-        stab_index_left = 0
-        stab_index_right = nZ
+        stab_index_left = z_anc[0]
+        stab_index_right = z_anc[-1]
 
     # Get weight and correction data from the weight generation function
-    weight_matrix, boundary_vec, correction_matrix =\
+    weight_matrix, boundary_vec =\
         weight_gen.run(t1, t2, t_cycle, pm, symm_flag, distance,
-                       max_lookback, x_correction_flag=x_correction_flag)
+                       max_lookback)
 
     # Initialize gardener
-    gard = gardener.Gardener(correction_matrix=correction_matrix,
+    gard = gardener.Gardener(code_layout=code_layout,
                              num_ancillas=num_ancillas,
                              max_lookback=max_lookback,
                              weight_calculation_method='weight_matrix',

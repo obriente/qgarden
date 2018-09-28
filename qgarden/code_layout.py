@@ -25,6 +25,57 @@ class CodeLayout():
 
         self.bound_arr = self.get_bound_arr()
 
+    def get_num_anc(self):
+        '''Returns the total number of ancilla qubits in the layout
+
+        Returns:
+            int -- The total number of anc
+        '''
+
+        return len(self.anc_types)
+
+    def get_x_stabs(self):
+        '''Returns the indices of the X-type stabilizers as they appear in the full stabilizer
+
+        Returns:
+            list -- The indices of the X stabilizers
+        '''
+
+        x_stabs = [i for i, anc_type in enumerate(
+            self.anc_types) if anc_type is 'X']
+        return x_stabs
+
+    def get_z_stabs(self):
+        '''Returns the indices of the Z-type stabilizers as they appear in the full stabilizer
+
+        Returns:
+            list -- The indices of the Z stabilizers
+        '''
+
+        z_stabs = [i for i, anc_type in enumerate(
+            self.anc_types) if anc_type is 'Z']
+        return z_stabs
+
+    def get_x_stabs_pos(self):
+        '''Returns the positions of the X-type ancillas in the order as they appear in the full stabilizer
+
+        Returns:
+            list -- The positions of the X ancillas
+        '''
+        x_stabs = self.get_x_stabs()
+        x_stabs_pos = [self.anc_cords[x_stab] for x_stab in x_stabs]
+        return x_stabs_pos
+
+    def get_z_stabs_pos(self):
+        '''Returns the positions of the Z-type ancillas in the order as they appear in the full stabilizer
+
+        Returns:
+            list -- The positions of the Z ancillas
+        '''
+        z_stabs = self.get_z_stabs()
+        z_stabs_pos = [self.anc_cords[z_stabs] for z_stabs in z_stabs]
+        return z_stabs_pos
+
     def get_chebyshev_dist(self, start_index, end_index):
         '''Returns the manhattan distance between two ancillas positioned on a physical grid as defined by their index in the stabilizer.
 

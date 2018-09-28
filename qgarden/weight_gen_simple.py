@@ -48,7 +48,7 @@ import numpy as np
 from numpy import linalg as la
 
 
-def run(px, py, pz, pm, distance, max_lookback, *, x_correction_flag=False):
+def run(px, py, pz, pm, distance, max_lookback):
     '''
     Calculate probabilities for all different edges in our matrix,
     convert to weights. Note that in combining probabilities here
@@ -61,8 +61,6 @@ def run(px, py, pz, pm, distance, max_lookback, *, x_correction_flag=False):
     distance: code distance (must be an odd integer >=3)
 
     max_lookback: number of timesteps back in time to generate.
-
-    x_corr_flag: flag for whether we correct x or z errors.
     '''
 
     # Generate position lists
@@ -76,17 +74,13 @@ def run(px, py, pz, pm, distance, max_lookback, *, x_correction_flag=False):
     # Get the separated matrices from the model used
     matrix_dic = get_separated_matrices(phx, phy, phz, paZ, paX, psx, psy,
                                         psz, pdx, pdy, pdz, pm, distance,
-                                        Z_pos_list, X_pos_list,
-                                        x_correction_flag)
-
-    # Extract the correction matrix to return separately
-    correction_matrix = matrix_dic['correction_matrix']
+                                        Z_pos_list, X_pos_list)
 
     # Combine separated matrices into the final product
     weight_matrix, boundary_vec = combine_matrices(matrix_dic, max_lookback)
 
     # Generate weight matrices from graph error rates and return
-    return weight_matrix, boundary_vec, correction_matrix
+    return weight_matrix, boundary_vec
 
 
 def convert_probabilities(px, py, pz, pm):
@@ -133,7 +127,6 @@ def convert_probabilities(px, py, pz, pm):
 
 
 def gen_pos_lists(d):
-
     '''
     Generates the position of the ancilla qubits on a(d+1)x(d+1)
     lattice, following the orientation in Fig.1 of arXiv:1705.07855 .
@@ -150,17 +143,12 @@ def gen_pos_lists(d):
 
 
 def get_separated_matrices(phx, phy, phz, paZ, paX, psx, psy, psz, pdx, pdy,
-                           pdz, pm, distance, Z_pos_list, X_pos_list,
-                           x_correction_flag):
-
+                           pdz, pm, distance, Z_pos_list, X_pos_list):
     '''
     For the sake of readability, I have split up individual pieces of
     weight matrix generation into separate functions. This is an umbrella
     that just returns all of them.
     '''
-
-    correction_matrix = get_correction_matrix(Z_pos_list, X_pos_list,
-                                              x_correction_flag, distance)
 
     A_mat_Z = get_A_mat_Z(paZ, pdx, pdy, pm, Z_pos_list)
 
@@ -177,7 +165,6 @@ def get_separated_matrices(phx, phy, phz, paZ, paX, psx, psy, psz, pdx, pdy,
                                       pdz, distance, X_pos_list)
 
     matrix_dic = {
-        'correction_matrix': correction_matrix,
         'A_mat_Z': A_mat_Z,
         'A0_mat_Z': A0_mat_Z,
         'A_bound_mat_Z': A_bound_mat_Z,
@@ -189,75 +176,7 @@ def get_separated_matrices(phx, phy, phz, paZ, paX, psx, psy, psz, pdx, pdy,
     return matrix_dic
 
 
-def get_correction_matrix(Z_pos_list, X_pos_list, x_correction_flag, distance):
-
-    '''
-    This function generates a dictionary of whether or not
-    any given chain commutes with a logical error on the surface
-    code, when the logical is either X on all physical qubits or
-    Z on all physical qubits.
-    '''
-
-    # Get number of X and Z ancillas
-    nZ = len(Z_pos_list)
-    nX = len(X_pos_list)
-
-    # Initialize correction dictionary
-    num_ancillas = len(Z_pos_list) + len(X_pos_list)
-    correction_matrix = np.zeros([num_ancillas+1,
-                                  num_ancillas+1], dtype=int)
-
-    # Check which logical we are making parity for
-    if x_correction_flag is True:
-
-        # Loop over X ancillas
-        for pos, j1 in zip(X_pos_list, range(nX)):
-            x1, y1 = pos
-
-            # Insert parity of connection to boundary
-            # This requires we calculate which boundary
-            # the ancilla qubit would connect to
-            if y1 < distance / 2:
-                correction_matrix[j1+nZ, -1] = y1 % 2
-                correction_matrix[-1, j1+nZ] = y1 % 2
-            else:
-                correction_matrix[j1+nZ, -1] = (y1 + 1) % 2
-                correction_matrix[-1, j1+nZ] = (y1 + 1) % 2
-
-            # Loop over all other Z ancilla qubits
-            for pos2, j2 in zip(X_pos_list[j1+1:], range(j1+1, nX)):
-                x2, y2 = pos2
-                correction_matrix[j1+nZ, j2+nZ] = (y1-y2) % 2
-                correction_matrix[j2+nZ, j1+nZ] = (y1-y2) % 2
-
-    else:
-
-        # Loop over Z ancillas
-        for pos, j1 in zip(Z_pos_list, range(nZ)):
-            x1, y1 = pos
-
-            # Insert parity of connection to boundary
-            # This requires we calculate which boundary
-            # the ancilla qubit would connect to
-            if x1 < distance / 2:
-                correction_matrix[j1, -1] = x1 % 2
-                correction_matrix[-1, j1] = x1 % 2
-            else:
-                correction_matrix[j1, -1] = (x1 + 1) % 2
-                correction_matrix[-1, j1] = (x1 + 1) % 2
-
-            # Loop over all other ancilla qubits
-            for pos2, j2 in zip(Z_pos_list[j1+1:], range(j1+1, nZ)):
-                x2, y2 = pos2
-
-                correction_matrix[j1, j2] = (x1-x2) % 2
-                correction_matrix[j2, j1] = (x1-x2) % 2
-
-    return correction_matrix
-
-
 def get_A_mat_Z(paZ, pdx, pdy, pm, Z_pos_list):
-
     '''
     This function generates the adjacency matrix for the
     Z error graph between different timesteps, and is error
@@ -321,7 +240,6 @@ def get_A_mat_Z(paZ, pdx, pdy, pm, Z_pos_list):
 
 
 def get_A0_mat_Z(phx, phy, psx, psy, pdx, pdy, distance, Z_pos_list):
-
     '''
     This function generates the adjacency matrix for the
     Z error graph between the same time step, and is error
@@ -425,7 +343,6 @@ def get_A_bound_mat_Z(phx, phy, psx, psy, pdx, pdy, distance, Z_pos_list):
 
 
 def get_A_mat_X(paX, pdy, pdz, pm, X_pos_list):
-
     '''
     This function generates the adjacency matrix for the
     X error graph between different time steps, and is error
