@@ -51,7 +51,7 @@ reload(bl)
 class Gardener:
 
     def __init__(self, *,
-                 correction_matrix,
+                 code_layout,
                  num_ancillas,
                  max_lookback=50,
                  weight_calculation_method='weight_matrix',
@@ -61,17 +61,12 @@ class Gardener:
         of weight matrices, and store some technical data for later.
 
         Required input:
-        @correction_matrix: For any given string between two errors, we need
+        @code_layout: For any given string between two errors, we need
             to know whether or not this commutes with the logical operator,
             which is dependent on the definition of the logical operator.
 
             (Here, by logical we mean either logical X or logical Z. It
             should always be clear from the situation.)
-
-            This should take the form of a matrix b[i,j],
-            where i and j are the index of two ancilla qubits (-1 for
-            the boundary), and b=1 if the string commutes (and b=0 if not).
-            Note that for any QEC code this should be well-defined.
 
         @weight_calculation_method: flag for how weights are calculated
             for input into blossom.
@@ -115,7 +110,7 @@ class Gardener:
         self.weight_calculation_method = weight_calculation_method
 
         # In order to interpret the final pairing, we need
-        self.correction_matrix = correction_matrix
+        self.code_layout = code_layout
 
         # Store the number of ancilla measurements per cycle
         self.num_ancillas = num_ancillas
@@ -170,8 +165,8 @@ class Gardener:
 
             # distance between vertical rounds for use in blossom.
             self.time_boundary_weight = -0.5*np.log(
-                                   np.max(self.AP0_mats[num_ancillas:, :])**2 +
-                                   np.max(self.AP0_mats[:num_ancillas, :]))
+                np.max(self.AP0_mats[num_ancillas:, :])**2 +
+                np.max(self.AP0_mats[:num_ancillas, :]))
 
         elif weight_calculation_method == 'weight_matrix':
 
@@ -289,8 +284,8 @@ class Gardener:
 
             # distance between vertical rounds for use in blossom.
             self.time_boundary_weight = -0.5*np.log(
-                            np.max(self.AP0_mats[self.num_ancillas:, :])**2 +
-                            np.max(self.AP0_mats[:self.num_ancillas, :]))
+                np.max(self.AP0_mats[self.num_ancillas:, :])**2 +
+                np.max(self.AP0_mats[:self.num_ancillas, :]))
 
         elif self.weight_calculation_method == 'weight_matrix':
 
@@ -347,7 +342,6 @@ class Gardener:
 
         self.graph.time_boundary_weight = min(self.time_boundary_weight,
                                               self.graph.time_boundary_weight)
-
 
     def reset(self, ancilla_states=None):
         '''Remove previous data about a given experimental run if it is present,
@@ -431,7 +425,6 @@ class Gardener:
 
     def result(self,
                boundary_switch=1,
-               cm_list=None,
                continue_flag=False,
                final_stabilizers=None,
                syndromedd=None,
@@ -453,9 +446,6 @@ class Gardener:
         Output:
         res: the logical error bitflip bit.
         '''
-        if cm_list is None:
-            cm_list = [self.correction_matrix] * (self.timestep+1)
-
         if boundary_switch > 0:
 
             res = 0
@@ -544,7 +534,8 @@ class Gardener:
                     else:
                         continue
 
-                    res = res ^ cm_list[timestep][ancilla_index, pair_index]
+                    res = res ^ self.code_layout.get_correction(
+                        ancilla_index, pair_index, stab_index_left, stab_index_right)
 
         if boundary_switch != 1:
 
@@ -573,7 +564,8 @@ class Gardener:
                 else:
                     continue
 
-                res2 = res2 ^ cm_list[timestep][ancilla_index, pair_index]
+                res2 = res2 ^ self.code_layout.get_correction(
+                    ancilla_index, pair_index, stab_index_left, stab_index_right)
 
         # Undo any damage done by final measurement
         if continue_flag and len(error_list) > 0:
@@ -598,8 +590,8 @@ class Gardener:
         '''
         # Take either first or second derivative depending on deriv_flag
         syndromedd = [x ^ y for x, y in zip(syndrome,
-                      self.syndromes[self.num_ancillas * (2-self.deriv_flag):
-                                     self.num_ancillas * (3-self.deriv_flag)])]
+                                            self.syndromes[self.num_ancillas * (2-self.deriv_flag):
+                                                           self.num_ancillas * (3-self.deriv_flag)])]
 
         # Push syndrome onto stack, eject last row as we no longer need it
         self.syndromes = (self.syndromes[self.num_ancillas:] + syndrome)
@@ -662,7 +654,6 @@ class Gardener:
         return error_list
 
     def get_weights(self, error, final_flag, **kwargs):
-
         '''
         Extracts weights from a pmat, and returns them.
 
@@ -729,7 +720,6 @@ class Gardener:
         return weight_list
 
     def update_Pmats(self, syndrome):
-
         '''
         Updates the Pmats that we extract weights for our error graph
         for the partial_weight_matrix method using the approximation
@@ -790,7 +780,8 @@ class Gardener:
         # from the previous P matrix (cutting off terms we don't)
         # need if we are far enough into the calculation
         if self.timestep == 2:
-            new_Pmat[self.num_ancillas:, self.num_ancillas:] = self.P_mat.todense()
+            new_Pmat[self.num_ancillas:,
+                     self.num_ancillas:] = self.P_mat.todense()
         else:
             new_Pmat[self.num_ancillas:, self.num_ancillas:]\
                 = self.P_mat[:, :self.num_ancillas].todense()
@@ -811,7 +802,6 @@ class Gardener:
         self.P_mat = sp.csc_matrix(new_Pmat[:self.max_rows, :])
 
     def get_Pmats_final(self, syndrome):
-
         '''
         Updates the Pmats that we extract weights for
         our error graph from, for the final round before a majority
@@ -873,7 +863,8 @@ class Gardener:
         # from the previous P matrix (cutting off terms we don't)
         # need if we are far enough into the calculation
         if self.timestep == 2:
-            new_Pmat[self.num_ancillas:, self.num_ancillas:] = self.P_mat.todense()
+            new_Pmat[self.num_ancillas:,
+                     self.num_ancillas:] = self.P_mat.todense()
         else:
             new_Pmat[self.num_ancillas:, self.num_ancillas:]\
                 = self.P_mat[:, :self.num_ancillas].todense()
@@ -891,4 +882,3 @@ class Gardener:
         new_Pmat[:self.num_ancillas, :self.num_ancillas] = self.P0_mat_final
 
         return new_Pmat
-
