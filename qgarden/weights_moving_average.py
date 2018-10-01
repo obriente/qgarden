@@ -119,7 +119,7 @@ class weights_moving_average(object):
 
     def sig_test(self, t, i, j):
         anc_dist = self.code_layout.get_chebyshev_dist(i, j)
-        if anc_dist is None or (max(anc_dist, t) >= self.max_dist):
+        if anc_dist is None or ((anc_dist + abs(t)) > self.max_dist):
             return 0
         return 1
 
