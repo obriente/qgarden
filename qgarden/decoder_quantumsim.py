@@ -73,10 +73,10 @@ def run(data, distance, max_lookback, t1, t2, t_cycle, pm,
     # Calculate position of final stabilizer measurements
     if x_correction_flag is True:
         stab_index_left = x_anc[0]
-        stab_index_right = x_anc[-1]
+        stab_index_right = (x_anc[-1]+1)
     else:
         stab_index_left = z_anc[0]
-        stab_index_right = z_anc[-1]
+        stab_index_right = (z_anc[-1]+1)
 
     # Get weight and correction data from the weight generation function
     weight_matrix, boundary_vec =\

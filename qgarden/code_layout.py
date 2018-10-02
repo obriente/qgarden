@@ -149,7 +149,7 @@ class CodeLayout():
             int -- 1 if the chain results in a logical error and 0 otherwise
         '''
         final_stab_range = [ind for ind in range(
-            stab_index_left, (stab_index_right+1))]
+            stab_index_left, stab_index_right)]
         final_stab_range.append(-1)
 
         if start_index not in final_stab_range or end_index not in final_stab_range:
