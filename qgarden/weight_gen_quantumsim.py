@@ -766,7 +766,8 @@ def combine_matrices(matrix_dic, max_lookback, two_column_flag):
     # but we actually *want* it to return -inf, so we suppress
     # the warning here
     np.seterr(divide='ignore')
-    weight_matrix = -np.log(P_mat_big[:, :num_ancillas])
+    #weight_matrix = -np.log(P_mat_big[:, :num_ancillas])
+    weight_matrix = -np.log(P_mat_big)
 
     # We now need to calculate the connections from all ancillas
     # to the boundary. As paths never return from the boundary,
