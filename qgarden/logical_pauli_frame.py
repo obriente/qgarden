@@ -98,8 +98,6 @@ def run(data, distance, logical_dic, max_lookback, num_ancillas,
         elif measurement_Z == 'MX':
             sil = stab_index_left + num_ancillas//2
             sir = stab_index_right + num_ancillas//2
-        else:
-            raise ValueError('my logical should be on the X or Z')
 
         result.append(gard.result(final_stabilizers=final_stabilizers,
                                   stab_index_left=sil,

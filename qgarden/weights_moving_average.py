@@ -3,10 +3,12 @@ weights_moving average: Implements the adaptive decoder
 technique described in arxiv:1712.02360
 
 Author: Stephen Spitz, minor adjustments by Tom O'Brien
+and Boris Varbanov.
 Licensed under the GNU GPL 3.0
 '''
 from math import sqrt, log
 import numpy as np
+
 
 
 class weights_moving_average(object):
@@ -17,6 +19,7 @@ class weights_moving_average(object):
         self.lookback = lookback
         self.window = window
         self.max_dist = max_dist
+
 
         self.measurement_matrix = np.zeros(shape=(2, self.num_anc))
         self.syndrome_matrices = [np.array([])]
@@ -84,6 +87,12 @@ class weights_moving_average(object):
                                 syndrome_matrix[t:, j]).astype(int)) /\
                                 num_terms[t]
 
+        if self.plotting:
+            plt.figure(figsize=(10,10))
+            plt.imshow(np.log(self.xor_matrix[0]))
+            plt.colorbar()
+            plt.title('log(xor_matrix)')
+
     def update_and_matrix(self):
 
         self.and_matrix = np.zeros(shape=self.and_matrix.shape)
@@ -103,6 +112,12 @@ class weights_moving_average(object):
                             syndrome_matrix[t:, j]).astype(int)) /\
                             num_terms[t]
 
+        if self.plotting:
+            plt.figure(figsize=(10,10))
+            plt.imshow(np.log(self.and_matrix[0]))
+            plt.colorbar()
+            plt.title('log(and_matrix)')
+
     def update_varmat(self):
 
         for t in range(self.lookback):
@@ -116,7 +131,7 @@ class weights_moving_average(object):
                             self.and_matrix[0, i, i] *
                             self.and_matrix[0, j, j]) /\
                             (1 - 2 * self.xor_matrix[t, i, j])
-
+                        
     def sig_test(self, t, i, j):
         anc_dist = self.code_layout.get_chebyshev_dist(i, j)
         if anc_dist is None or ((anc_dist + abs(t)) > self.max_dist):
@@ -142,6 +157,12 @@ class weights_moving_average(object):
                     else:
                         self.qmat[t][i][j] = self.sig_test(
                             t, i, j) * (1 - sqrt(Q)) / 2
+
+        if self.plotting:
+            plt.figure(figsize=(10, 10))
+            plt.imshow(np.log(self.qmat[0]))
+            plt.colorbar()
+            plt.title('log(qmat)')
 
         self.update_boundary_vec()
 
