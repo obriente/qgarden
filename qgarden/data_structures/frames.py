@@ -33,10 +33,13 @@ class HeisenbergFrame:
         rules).
     """
 
-    def __init__(self, paulis, parities, cliffords):
-        self.parities = parities
+    def __init__(
+            self, paulis, cliffords, parities=None,
+            label_list=None):
+        self.parities = parities or {}
         self.paulis = paulis
         self.cliffords = cliffords
+        self.label_list = label_list
 
     def update(self, error):
         """Updates frame with detected error
@@ -47,8 +50,22 @@ class HeisenbergFrame:
             the stabilizers between which the error occurred
         """
         for op_label in self.parities:
-            self.parities[op_label] = self.parities[op_label] ^\
+            self.parities[op_label] ^=\
                 self.paulis[op_label].anticommutes_with(error)
+
+    def update_from_index(self, e1, e2):
+        """Updates from a pair of indices instead of labels
+        
+        Params
+        ------
+        e1, e2 : int
+            the indices corresponding to the errors of interest.
+        """
+        if self.label_list is None:
+            raise ValueError('I need a label_list to use this.')
+
+        error = [self.label_list[e1], self.label_list[e2]]
+        self.update(error)
 
     def apply_clifford(self, label):
         """Applies logical Clifford operator to the frame
@@ -83,9 +100,84 @@ class HeisenbergFrame:
             return None
         return self.parities[measurement]
 
-    def reset_parities(self, parities):
+    def reset(self, parities):
         self.parities = parities
 
+
+class MultiFrame(HeisenbergFrame):
+    """A multiframe is a class that contains multiple Heisenberg
+    frames that act on the same set of logical operators.
+
+    In particular, a Heisenberg frame contains a set representation
+    of the stabilizers; this allows for that representation to change.
+
+    Params
+    ------
+    frames : list of HeisenbergFrames
+        the set of HeisenbergFrames.
+    active_frame : which frame is currently active
+    """
+    def __init__(self, frames, 
+                 active_frame=0,
+                 parities=None, **kwargs):
+        self.frames = frames
+        self.active_frame = active_frame
+        super().__init__(paulis=None, **kwargs)
+        if parities:
+            self.reset(active_frame, parities)
+
+    def reset(self, active_frame, parities):
+        """Reset the parity in all frames
+        
+        Params
+        ------
+
+        parity : dict
+            the reset parities of all logical operators
+        """
+        self.active_frame = active_frame
+        self.parities = parities
+        for frame in self.frames:
+            frame.reset(parities)
+
+    def apply_clifford(self, label):
+        """Apply a clifford operator, which involves updating
+        the frame and then applying the clifford operator to the
+        logical operators.
+
+        Params
+        ------
+        error : list in the form [s1,s2]
+            the stabilizers between which the error occurred
+        label : str
+            the label of the Clifford to be updated.
+        """
+        self.active_frame =\
+            self.cliffords[label].update_frame(self.active_frame)
+        super().apply_clifford(label)
+        self.frames[self.active_frame].reset(self.parities)
+
+    def update(self, error):
+        """Passes error through to the appropriate
+        frame for update
+
+        Params
+        ------
+        error : list in the form [s1,s2]
+            the stabilizers between which the error occurred
+        """
+        self.frames[self.active_frame].update(error)
+
+    def update_from_index(self, e1, e2):
+        """Passes error through to the appropriate
+        frame for update
+
+        Params
+        ------
+        e1, e2 : int
+            the indices corresponding to the errors of interest.
+        """
+        self.frames[self.active_frame].update_from_index(e1,e2)
 
 # format_dependent commutation check
 def check_sign_single_pauli(sp1, sp2):
@@ -153,7 +245,7 @@ class AncillaGraph(PointerGraph):
             dna_format : boolean
                 whether the labels are in the format 'Dna'.
         """
-        super().__init__(vertex_dic=ancillas)
+        super().__init__(vertex_dic=dict(ancillas))
         self.dna_format = dna_format
         self.boundary_label = boundary_label
         self.make_edge_dic()
@@ -199,8 +291,6 @@ class LogicalPauli(AncillaGraph, WeightedPointerGraph):
         super().__init__(ancillas, **kwargs)
         self.logical = logical
         self.precompile = precompile
-        if self.dna_format:
-            self.check_commutes_with_ancillas(logical)
 
         self.edge_weights = {}
         for pauli in self.edge_dic:
@@ -236,8 +326,13 @@ class LogicalClifford:
     """LogicalClifford: update rules for Pauli operators
     """
 
-    def __init__(self, op_dic=None):
+    def __init__(self, op_dic=None, frame_list=None):
         self.op_dic = op_dic or {}
+        self.frame_list = frame_list or []
 
     def update(self, op_label):
         return self.op_dic[op_label]
+    def update_frame(self, frame_index):
+        if self.frame_list:
+            return self.frame_list[frame_index]
+        return frame_index

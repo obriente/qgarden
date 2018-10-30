@@ -56,7 +56,7 @@ def run(data, frame, max_lookback,
     num_ancillas = code_layout.get_num_anc()
     # Initialize gardener
     gard = gardener.Gardener(correction_matrix=None,
-                             frame=frame,
+                             frames=frames,
                              num_ancillas=num_ancillas,
                              max_lookback=max_lookback,
                              weight_calculation_method='weight_matrix',

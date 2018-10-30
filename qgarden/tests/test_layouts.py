@@ -8,6 +8,9 @@ from qgarden.layouts.surface_17 import(
     get_Z_logical_s17,
     s17_heisenberg_frame)
 
+from qgarden.data_structures import(
+    LogicalPauli)
+
 
 class TestSurface17(unittest.TestCase):
 
@@ -22,15 +25,29 @@ class TestSurface17(unittest.TestCase):
                                   if p in ancilla]), 2)
 
     def test_surface17_operators(self):
-        logicalZ = get_Z_logical_s17(precompile=False)
-        logicalY = get_Y_logical_s17(precompile=False)
-        logicalX = get_X_logical_s17(precompile=False)
+        ancillas = get_s17_layout()
+        logicalZ = LogicalPauli(
+            logical=get_Z_logical_s17(),
+            ancillas=ancillas,
+            precompile=False, boundary_label='B')
+        logicalY = LogicalPauli(
+            logical=get_Y_logical_s17(),
+            ancillas=ancillas,
+            precompile=False, boundary_label='B')
+        logicalX = LogicalPauli(
+            logical=get_X_logical_s17(),
+            ancillas=ancillas,
+            precompile=False, boundary_label='B')
         self.assertEqual(len(logicalZ.logical), 3)
         self.assertEqual(len(logicalX.logical), 3)
         self.assertEqual(len(logicalY.logical), 6)
 
     def test_surface17_boundary_connectivity(self):
-        logicalZ = get_Z_logical_s17(precompile=False)
+        ancillas = get_s17_layout()
+        logicalZ = LogicalPauli(
+            logical=get_Z_logical_s17(),
+            ancillas=ancillas,
+            precompile=False, boundary_label='B')
         for err, ancillas in logicalZ.edge_dic.items():
             print(err, ancillas)
         for ancilla, errs in logicalZ.vertex_dic.items():
@@ -47,12 +64,28 @@ class TestSurface17(unittest.TestCase):
 
     def test_surface17_precompilation(self):
         ancillas = get_s17_layout()
-        logicalZ = get_Z_logical_s17()
-        logicalY = get_Y_logical_s17()
-        logicalX = get_X_logical_s17()
+        for label, ancilla in ancillas.items():
+            print(label, ancilla)
+        logicalZ = LogicalPauli(
+            logical=get_Z_logical_s17(),
+            ancillas=ancillas,
+            precompile=True, boundary_label='B')
+        logicalY = LogicalPauli(
+            logical=get_Y_logical_s17(),
+            ancillas=ancillas,
+            precompile=True, boundary_label='B')
+        logicalX = LogicalPauli(
+            logical=get_X_logical_s17(),
+            ancillas=ancillas,
+            precompile=True, boundary_label='B')
         assert len(logicalZ.precompiled_parities) == 9
         assert len(logicalY.precompiled_parities) == 9
         assert len(logicalX.precompiled_parities) == 9
+
+        for vertex, edges in logicalX.vertex_dic.items():
+            print(vertex, edges)
+        for edge, vertices in logicalX.edge_dic.items():
+            print(edge, vertices)
 
         for a1 in ancillas:
             for a2 in ancillas:
@@ -70,13 +103,30 @@ class TestSurface17(unittest.TestCase):
 
     def test_s17_frame(self):
         frame = s17_heisenberg_frame()
-        self.assertEqual(len(frame.paulis), 3)
-        self.assertEqual(len(frame.cliffords), 5)
-        self.assertEqual(len(frame.parities), 1)
+        self.assertFalse(frame.paulis)
+        self.assertEqual(len(frame.frames[0].paulis), 3)
+        self.assertEqual(len(frame.frames[1].paulis), 3)
+        self.assertEqual(len(frame.cliffords), 6)
+        self.assertFalse(frame.parities)
+
+    def test_s17_frame_parities_linked(self):
+        frame = s17_heisenberg_frame()
+        frame.reset(active_frame=0,parities={'Z': 0})
+        self.assertEqual(frame.parities['Z'], 0)
+        self.assertEqual(frame.frames[0].parities['Z'], 0)
+        self.assertEqual(frame.frames[1].parities['Z'], 0)
+        frame.parities['Z'] = 1
+        self.assertEqual(frame.frames[0].parities['Z'], 1)
+        self.assertEqual(frame.frames[1].parities['Z'], 1)
 
     def test_s17_frame_simple_parities(self):
         frame = s17_heisenberg_frame()
+        frame.reset(active_frame=0,parities={'Z': 0})
         frame.apply_clifford('Sx')
+        for key,val in frame.frames[0].paulis['Y'].precompiled_parities.items():
+            print(key, val)
+        print('active frame is:', frame.active_frame)
+        print(frame.parities)
         frame.update(['Z0','B'])
         self.assertEqual(len(frame.parities), 1)
         self.assertEqual(frame.parities['Y'], 1)
@@ -86,3 +136,35 @@ class TestSurface17(unittest.TestCase):
         frame.update(['Z0','Z1'])
         self.assertEqual(len(frame.parities), 1)
         self.assertEqual(frame.parities['Y'], 0)
+
+    def test_s17_superframe(self):
+        frame = s17_heisenberg_frame()
+        frame.reset(active_frame=0,parities={'Z': 0})
+        frame.apply_clifford('H')
+        self.assertEqual(frame.active_frame, 1)
+        self.assertEqual(frame.parities['X'], 0)
+
+    def test_s17_moreops(self):
+        frame = s17_heisenberg_frame()
+        frame.reset(active_frame=0,parities={'Z': 0})
+        frame.apply_clifford('H')
+        print(frame.parities)
+        print(frame.active_frame)
+        print(frame.frames[1].parities)
+        frame.update(['X1', 'B'])
+        print(frame.frames[1].parities)
+        frame.apply_clifford('H')
+        self.assertEqual(frame.parities['Z'],1)
+
+    def test_s17_labelled(self):
+        frame = s17_heisenberg_frame()
+        frame.reset(active_frame=0,parities={'Z': 0})
+        frame.update_from_index(1,-1)
+        frame.apply_clifford('H')
+        print(frame.parities)
+        print(frame.active_frame)
+        print(frame.frames[1].parities)
+        frame.update_from_index(1,-1)
+        print(frame.frames[1].parities)
+        frame.apply_clifford('H')
+        self.assertEqual(frame.parities['Z'],0)
