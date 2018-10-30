@@ -10,7 +10,8 @@ from .frames import(
     check_sign_multi_pauli,
     HeisenbergFrame,
     LogicalPauli,
-    LogicalClifford)
+    LogicalClifford,
+    MultiFrame)
 
 from .code_layout import(
     CodeLayout)

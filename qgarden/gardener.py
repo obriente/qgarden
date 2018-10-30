@@ -124,6 +124,8 @@ class Gardener:
         self.max_rows = (max_lookback + 1) * num_ancillas
         self.max_lookback = max_lookback
 
+        self.frame=frame
+
         # Tolerance for the probabilities in the P_matrices
         try:
             self.max_weight = kwargs['max_weight']
@@ -539,7 +541,7 @@ class Gardener:
                     else:
                         continue
 
-                    if frame:
+                    if self.frame:
                         frame.update_from_index(ancilla_index, pair_index)
                     else:
                         res = res ^ self.code_layout.get_correction(
@@ -571,7 +573,8 @@ class Gardener:
 
                 else:
                     continue
-
+                if self.frame:
+                    frame.update_from_index(ancilla_index, pair_index)
                 res2 = res2 ^ self.code_layout.get_correction(
                     ancilla_index, pair_index, stab_index_left, stab_index_right)
 
