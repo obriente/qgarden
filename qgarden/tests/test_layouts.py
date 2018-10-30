@@ -71,7 +71,7 @@ class TestSurface17(unittest.TestCase):
     def test_s17_frame(self):
         frame = s17_heisenberg_frame()
         self.assertEqual(len(frame.paulis), 3)
-        self.assertEqual(len(frame.cliffords), 6)
+        self.assertEqual(len(frame.cliffords), 5)
         self.assertEqual(len(frame.parities), 1)
 
     def test_s17_frame_simple_parities(self):
@@ -80,7 +80,7 @@ class TestSurface17(unittest.TestCase):
         frame.update(['Z0','B'])
         self.assertEqual(len(frame.parities), 1)
         self.assertEqual(frame.parities['Y'], 1)
-        frame.apply_clifford('H')
+        frame.apply_clifford('X')
         self.assertEqual(len(frame.parities), 1)
         self.assertEqual(frame.parities['Y'], 0)
         frame.update(['Z0','Z1'])

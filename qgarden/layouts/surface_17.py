@@ -70,13 +70,6 @@ def get_ZClifford_sq():
     cliff.op_dic['Z'] = ['Z', 0]
     return cliff
 
-def get_HClifford_sq():
-    cliff = LogicalClifford()
-    cliff.op_dic['X'] = ['Z', 0]
-    cliff.op_dic['Y'] = ['Y', 1]
-    cliff.op_dic['Z'] = ['X', 0]
-    return cliff
-
 def get_SzClifford_sq():
     cliff = LogicalClifford()
     cliff.op_dic['X'] = ['Y', 0]
@@ -115,7 +108,6 @@ def s17_heisenberg_frame(
     'X': get_XClifford_sq(),
     'Y': get_YClifford_sq(),
     'Z': get_ZClifford_sq(),
-    'H': get_HClifford_sq(),
     'Sz': get_SzClifford_sq(),
     'Sx': get_SxClifford_sq()}
 

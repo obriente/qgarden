@@ -13,9 +13,9 @@ reload(gardener)
 reload(weight_gen)
 
 
-def run(data, distance, logical_dic, max_lookback, num_ancillas,
-        weight_matrix, boundary_vec, correction_matrices,
-        stab_index_left, stab_index_right,
+def run(data, frame, max_lookback,
+        weight_matrix, boundary_vec, anc_pos_data,
+        stab_index_left, stab_index_right, fstab_as_deriv=False,
         continuous_flag=True, deriv_flag=2, tbw_tol=0.1):
 
     '''
@@ -52,8 +52,11 @@ def run(data, distance, logical_dic, max_lookback, num_ancillas,
         made in the gardener.
     '''
 
+    code_layout = CodeLayout(anc_pos_data)
+    num_ancillas = code_layout.get_num_anc()
     # Initialize gardener
     gard = gardener.Gardener(correction_matrix=None,
+                             frame=frame,
                              num_ancillas=num_ancillas,
                              max_lookback=max_lookback,
                              weight_calculation_method='weight_matrix',
@@ -65,6 +68,8 @@ def run(data, distance, logical_dic, max_lookback, num_ancillas,
     result = []
 
     for experiment in data:
+        parities = {'Z': 0}
+        frame.reset(parities=parities)
 
         # In this case we just generate a single binary result
         # for each experiment.
@@ -75,34 +80,17 @@ def run(data, distance, logical_dic, max_lookback, num_ancillas,
         # Split up syndrome list and final stabilizers
         syndromes, final_stabilizers, logicals = experiment
 
-        logical_Z = 'Z'
-        measurement_Z = 'MZ'
-        cm_list = []
-
         # Loop over syndromes, inserting each into the gardener
         for syndrome, logical in zip(syndromes, logicals):
             gard.update(syndrome)
+            frame.apply_logical(logical)
 
-            logical_Z = logical_dic[logical][logical_Z]
-            measurement_Z = logical_dic[logical][measurement_Z]
-            cm_list.append(correction_matrices[logical_Z])
-        cm_list.append(correction_matrices[logical_Z])
+        gard.result(
+            final_stabilizers=final_stabilizers,
+            stab_index_left=sil,
+            stab_index_right=sir,
+            continue_flag=False)
 
-        # Extract result from gardener. Note that here we can set
-        # continue flag to false, as we will not re-use the data,
-        # which saves us from having to store and restore the gardener
-        # state.
-        if measurement_Z == 'MZ':
-            sil = stab_index_left
-            sir = stab_index_right
-        elif measurement_Z == 'MX':
-            sil = stab_index_left + num_ancillas//2
-            sir = stab_index_right + num_ancillas//2
-
-        result.append(gard.result(final_stabilizers=final_stabilizers,
-                                  stab_index_left=sil,
-                                  stab_index_right=sir,
-                                  continue_flag=False,
-                                  cm_list=cm_list))
+        result.append(frame.get_parity('Z'))
 
     return result

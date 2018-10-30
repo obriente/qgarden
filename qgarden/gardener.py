@@ -53,6 +53,7 @@ class Gardener:
     def __init__(self, *,
                  code_layout,
                  num_ancillas,
+                 frame=None,
                  max_lookback=50,
                  weight_calculation_method='weight_matrix',
                  **kwargs):
@@ -67,6 +68,10 @@ class Gardener:
 
             (Here, by logical we mean either logical X or logical Z. It
             should always be clear from the situation.)
+
+        @frame: a HeisenbergFrame that keeps track of the parity of a
+            set of logical operators which both evolve in time and pick
+            up errors.
 
         @weight_calculation_method: flag for how weights are calculated
             for input into blossom.
@@ -534,8 +539,11 @@ class Gardener:
                     else:
                         continue
 
-                    res = res ^ self.code_layout.get_correction(
-                        ancilla_index, pair_index, stab_index_left, stab_index_right)
+                    if frame:
+                        frame.update_from_index(ancilla_index, pair_index)
+                    else:
+                        res = res ^ self.code_layout.get_correction(
+                            ancilla_index, pair_index, stab_index_left, stab_index_right)
 
         if boundary_switch != 1:
 
@@ -571,8 +579,9 @@ class Gardener:
         if continue_flag and len(error_list) > 0:
             del self.full_error_list[-len(error_list):]
             self.num_errors -= len(error_list)
-
-        if boundary_switch == 0:
+        if frame:
+            return
+        elif boundary_switch == 0:
             return res2
         elif boundary_switch == 1:
             return res
