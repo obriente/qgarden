@@ -11,3 +11,6 @@ from .frames import(
     HeisenbergFrame,
     LogicalPauli,
     LogicalClifford)
+
+from .code_layout import(
+    CodeLayout)

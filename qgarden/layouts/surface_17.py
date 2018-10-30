@@ -123,3 +123,10 @@ def s17_heisenberg_frame(
 
     return HeisenbergFrame(
         paulis=paulis, cliffords=cliffords, parities=parities)
+
+def s17_code_layout():
+    layout = CodeLayout(
+        anc_data = [('X',[0,2]), ('X', [1,1]), ('X', [2,2]),
+                    ('X', [3,1]), ('Z',[1,0]), ('Z', [1,2]),
+                    ('Z', [2,1]), ('Z', [2,3])])
+    return layout
