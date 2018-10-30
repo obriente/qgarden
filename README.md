@@ -2,7 +2,7 @@
 
 A fully-python blossom decoder for use in decoding surface and repetition quantum error correcting codes.
 
-Author: Thomas O'Brien (obrien@lorentz.leidenuniv.nl)
+Authors: Thomas O'Brien (obrien@lorentz.leidenuniv.nl), Boris Varbanov, Stephen Spitz
 
 Thanks to: Brian Tarasinski, Adriaan Rol, Niels Bultink, Xiang Fu, Ben Criger, Paul Baireuther and Leo DiCarlo for comments and assistance.
 
