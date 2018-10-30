@@ -3,32 +3,36 @@ weights_moving average: Implements the adaptive decoder
 technique described in arxiv:1712.02360
 
 Author: Stephen Spitz, minor adjustments by Tom O'Brien
+and Boris Varbanov.
 Licensed under the GNU GPL 3.0
 '''
-
-import numpy as np
 from math import sqrt, log
-from matplotlib import pyplot as plt
+import numpy as np
+
 
 
 class weights_moving_average(object):
 
-    def __init__(self, num_anc, lookback, window, plotting=False):
-
-        self.num_anc = num_anc
+    def __init__(self, lookback, window, max_dist, code_layout):
+        self.code_layout = code_layout
+        self.num_anc = self.code_layout.get_num_anc()
         self.lookback = lookback
         self.window = window
-        self.plotting = plotting
+        self.max_dist = max_dist
 
-        self.measurement_matrix = np.zeros(shape=(2, num_anc))
+
+        self.measurement_matrix = np.zeros(shape=(2, self.num_anc))
         self.syndrome_matrices = [np.array([])]
 
-        self.xor_matrix = np.zeros(shape=(lookback, num_anc, num_anc))
-        self.and_matrix = np.zeros(shape=(lookback, num_anc, num_anc))
+        self.xor_matrix = np.zeros(
+            shape=(lookback, self.num_anc, self.num_anc))
+        self.and_matrix = np.zeros(
+            shape=(lookback, self.num_anc, self.num_anc))
 
-        self.var_matrix = np.zeros(shape=(lookback, num_anc, num_anc))
-        self.qmat = np.zeros(shape=(lookback, num_anc, num_anc))
-        self.boundary_q = np.zeros(shape=(num_anc))
+        self.var_matrix = np.zeros(
+            shape=(lookback, self.num_anc, self.num_anc))
+        self.qmat = np.zeros(shape=(lookback, self.num_anc, self.num_anc))
+        self.boundary_q = np.zeros(shape=(self.num_anc))
         self.num_measurements = 0
 
     def new_syndrome(self):
@@ -60,7 +64,6 @@ class weights_moving_average(object):
             self.syndrome_matrices[-1] = np.vstack(
                 [new_syndrome, np.delete(self.syndrome_matrices[-1],
                                          self.window - 1, 0)])
-
 
     def update_xor_matrix(self):
 
@@ -128,17 +131,17 @@ class weights_moving_average(object):
                             self.and_matrix[0, i, i] *
                             self.and_matrix[0, j, j]) /\
                             (1 - 2 * self.xor_matrix[t, i, j])
-
-        plt.figure(figsize=(10,10))
-        plt.imshow(np.log(self.var_matrix[0]))
-        plt.colorbar()
-        plt.title('log(var_matrix)')
+                        
+    def sig_test(self, t, i, j):
+        anc_dist = self.code_layout.get_chebyshev_dist(i, j)
+        if anc_dist is None or ((anc_dist + abs(t)) > self.max_dist):
+            return 0
+        return 1
 
     def update_qmat(self):
 
         self.update_xor_matrix()
         self.update_and_matrix()
-
         self.update_varmat()
 
         for t in range(self.lookback):
@@ -152,8 +155,8 @@ class weights_moving_average(object):
                     elif 1 - sqrt(Q) < 0:
                         self.qmat[t][i][j] = 0
                     else:
-                        self.qmat[t][i][j] = \
-                            self.sig_test(t, i, j)*(1 - sqrt(Q)) / 2
+                        self.qmat[t][i][j] = self.sig_test(
+                            t, i, j) * (1 - sqrt(Q)) / 2
 
         if self.plotting:
             plt.figure(figsize=(10, 10))
@@ -163,16 +166,7 @@ class weights_moving_average(object):
 
         self.update_boundary_vec()
 
-    def sig_test(self, t, i, j):
-
-        if t == 0 and (j == i+1 or j == i-1):
-            return 1
-        elif t == 1 and (j == i or j == i-1):
-            return 1
-        else:
-            return 0
-
-    def return_weight_matrix(self):
+    def return_weight_matrix(self, test_data_flag=False):
 
         weight_matrix = np.zeros(shape=(self.num_anc*self.lookback,
                                         self.num_anc*self.lookback))
@@ -189,8 +183,7 @@ class weights_moving_average(object):
                 if t == 0 and i == j:
                     weight_matrix[n][m] = 0
                 else:
-                    weight_matrix[n][m] =\
-                        self.qmat[t][i][j] * self.sig_test(t, i, j)
+                    weight_matrix[n][m] = self.qmat[t][i][j]
 
         weight_matrix = weight_matrix + np.transpose(weight_matrix)
 
@@ -216,7 +209,8 @@ class weights_moving_average(object):
                     weight_matrix[n][m] = .001
                 else:
                     weight_matrix[n][m] = -log(weight_matrix[n][m])
-
+        if test_data_flag:
+            return self.xor_matrix, self.and_matrix, self.var_matrix, weight_matrix, boundary_weights
         return weight_matrix, boundary_weights
 
     def update_boundary_vec(self):
@@ -229,13 +223,7 @@ class weights_moving_average(object):
             np.multiply(np.prod(np.prod(1 - 2*self.qmat, axis=0), axis=0),
                         np.prod(np.prod(1 - 2*self.qmat, axis=0), axis=1)))/2
 
-        def sig_test_boundary(i):
-            if (i == 0 or i == self.num_anc - 1):
-                return 1
-            else:
-                return 0
-
-        boundary_filter = np.array([sig_test_boundary(i)
+        boundary_filter = np.array([self.code_layout.check_boundary(i)
                                     for i in range(self.num_anc)])
 
         self.boundary_q = self.boundary_q * boundary_filter

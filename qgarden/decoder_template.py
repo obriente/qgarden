@@ -18,16 +18,16 @@ todo: Currently we assume a square surface, this could be easily changed.
 
 from . import gardener
 from . import weight_gen_simple as weight_gen
+from .code_layout import CodeLayout
 from importlib import reload
 reload(gardener)
 reload(weight_gen)
 
 
-def run(data, distance, max_lookback, num_ancillas,
-        weight_matrix, boundary_vec, correction_matrix,
+def run(data, max_lookback,
+        weight_matrix, boundary_vec, anc_pos_data,
         stab_index_left, stab_index_right, fstab_as_deriv=False,
         continuous_flag=True, deriv_flag=2, tbw_tol=0.1):
-
     '''
     input:
     @ data: list of individual syndromes from a series of experiments
@@ -69,8 +69,10 @@ def run(data, distance, max_lookback, num_ancillas,
         made in the gardener.
     '''
 
+    code_layout = CodeLayout(anc_pos_data)
+    num_ancillas = code_layout.get_num_anc()
     # Initialize gardener
-    gard = gardener.Gardener(correction_matrix=correction_matrix,
+    gard = gardener.Gardener(code_layout=code_layout,
                              num_ancillas=num_ancillas,
                              max_lookback=max_lookback,
                              weight_calculation_method='weight_matrix',
@@ -127,9 +129,9 @@ def run(data, distance, max_lookback, num_ancillas,
 
                 # Small fix for current datasets, as the X
                 # and the Z ancillas have been switched around.
-                temp = list(syndrome[:nZ])
-                syndrome[:nZ] = list(syndrome[nZ:])
-                syndrome[nZ:] = temp
+                #temp = list(syndrome[:nZ])
+                #syndrome[:nZ] = list(syndrome[nZ:])
+                #syndrome[nZ:] = temp
 
                 # Insert single slice of syndrome into gardener
                 gard.update(syndrome)
