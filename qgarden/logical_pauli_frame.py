@@ -69,7 +69,7 @@ def run(data, frame, max_lookback,
 
     for experiment in data:
         parities = {'Z': 0}
-        frame.reset(parities=parities)
+        frame.reset(active_frame=0, parities=parities)
 
         # In this case we just generate a single binary result
         # for each experiment.
