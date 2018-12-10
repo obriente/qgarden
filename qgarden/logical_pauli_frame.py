@@ -68,8 +68,6 @@ def run(data, frame, max_lookback,
     result = []
 
     for experiment in data:
-        parities = {'Z': 0}
-        frame.reset(active_frame=0, parities=parities)
 
         # In this case we just generate a single binary result
         # for each experiment.
@@ -81,16 +79,27 @@ def run(data, frame, max_lookback,
         syndromes, final_stabilizers, logicals = experiment
 
         # Loop over syndromes, inserting each into the gardener
-        for syndrome, logical in zip(syndromes, logicals):
+        for syndrome in syndromes:
             gard.update(syndrome)
-            frame.apply_logical(logical)
 
-        gard.result(
+
+        corrections = gard.result(
             final_stabilizers=final_stabilizers,
             stab_index_left=sil,
             stab_index_right=sir,
-            continue_flag=False)
+            continue_flag=False,
+            get_corrections=True)
 
+        corrections = sorted(corrections, key=lambda x: x[0])
+
+        parities = {'Z': 0}
+        frame.reset(active_frame=0, parities=parities)
+        time = 0
+        for next_time, a1, a2 in corrections:
+            while time < next_time:
+                frame.apply_clifford(logicals[time])
+                time += 1
+            frame.update_from_index(a1,a2)
         result.append(frame.get_parity('Z'))
 
     return result
