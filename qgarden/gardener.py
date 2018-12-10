@@ -573,7 +573,7 @@ class Gardener:
 
                 else:
                     continue
-                if self.frame:
+                if self.frame and boundary_switch==0:
                     frame.update_from_index(ancilla_index, pair_index)
                 res2 = res2 ^ self.code_layout.get_correction(
                     ancilla_index, pair_index, stab_index_left, stab_index_right)

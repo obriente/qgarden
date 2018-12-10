@@ -8,7 +8,8 @@ from qgarden.data_structures import(
     LogicalPauli,
     LogicalClifford,
     HeisenbergFrame,
-    MultiFrame)
+    MultiFrame,
+    CodeLayout)
 
 def get_s17_layout(boundary_label='B'):
     ancillas = {
