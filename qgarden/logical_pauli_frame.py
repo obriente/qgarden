@@ -14,7 +14,7 @@ reload(weight_gen)
 
 
 def run(data, frame, max_lookback,
-        weight_matrix, boundary_vec, anc_pos_data,
+        weight_matrix, boundary_vec, code_layout,
         stab_index_left, stab_index_right, fstab_as_deriv=False,
         continuous_flag=True, deriv_flag=2, tbw_tol=0.1):
 
@@ -52,11 +52,10 @@ def run(data, frame, max_lookback,
         made in the gardener.
     '''
 
-    code_layout = CodeLayout(anc_pos_data)
     num_ancillas = code_layout.get_num_anc()
     # Initialize gardener
     gard = gardener.Gardener(correction_matrix=None,
-                             frames=frames,
+                             frame=frame,
                              num_ancillas=num_ancillas,
                              max_lookback=max_lookback,
                              weight_calculation_method='weight_matrix',
