@@ -13,12 +13,13 @@ import numpy as np
 
 class weights_moving_average(object):
 
-    def __init__(self, lookback, window, max_dist, code_layout):
+    def __init__(self, lookback, window, max_dist, code_layout, *, plotting=False):
         self.code_layout = code_layout
         self.num_anc = self.code_layout.get_num_anc()
         self.lookback = lookback
         self.window = window
         self.max_dist = max_dist
+        self.plotting = plotting
 
 
         self.measurement_matrix = np.zeros(shape=(2, self.num_anc))
