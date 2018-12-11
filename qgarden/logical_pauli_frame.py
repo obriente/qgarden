@@ -15,7 +15,7 @@ reload(weight_gen)
 
 def run(data, frame, max_lookback,
         weight_matrix, boundary_vec, code_layout,
-        stab_index_left, stab_index_right, fstab_as_deriv=False,
+        fstab_as_deriv=False,
         continuous_flag=True, deriv_flag=2, tbw_tol=0.1):
 
     '''
@@ -81,6 +81,15 @@ def run(data, frame, max_lookback,
         # Loop over syndromes, inserting each into the gardener
         for syndrome in syndromes:
             gard.update(syndrome)
+
+        # Calculate the stabilizer indices
+        H_par = sum([x == 'H' for x in logicals]) % 2
+        if H_par == 0:
+            sil = 0
+            sir = num_ancillas // 2
+        else:
+            sil = num_ancills // 2
+            sir = num_ancills
 
 
         corrections = gard.result(
