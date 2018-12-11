@@ -111,6 +111,8 @@ def run(data, frame, max_lookback,
             if a1 == a2:
                 continue
             frame.update_from_index(a1,a2)
+        for logical in logicals[time:]:
+            frame.apply_clifford(logical)
         result.append(frame.get_parity('Z'))
 
     return result
