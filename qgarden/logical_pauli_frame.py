@@ -88,8 +88,8 @@ def run(data, frame, max_lookback,
             sil = 0
             sir = num_ancillas // 2
         else:
-            sil = num_ancills // 2
-            sir = num_ancills
+            sil = num_ancillas // 2
+            sir = num_ancillas
 
 
         corrections = gard.result(
