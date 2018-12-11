@@ -97,7 +97,7 @@ def run(data, frame, max_lookback,
             stab_index_left=sil,
             stab_index_right=sir,
             continue_flag=False,
-            get_corrections=True)
+            return_corrections=True)
 
         corrections = sorted(corrections, key=lambda x: x[0])
 
