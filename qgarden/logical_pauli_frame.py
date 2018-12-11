@@ -108,6 +108,8 @@ def run(data, frame, max_lookback,
             while time < next_time:
                 frame.apply_clifford(logicals[time])
                 time += 1
+            if a1 == a2:
+                continue
             frame.update_from_index(a1,a2)
         result.append(frame.get_parity('Z'))
 
