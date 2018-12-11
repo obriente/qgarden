@@ -105,7 +105,7 @@ def run(data, frame, max_lookback,
         frame.reset(active_frame=0, parities=parities)
         time = 0
         for next_time, a1, a2 in corrections:
-            while time < next_time:
+            while time < next_time-1:
                 frame.apply_clifford(logicals[time])
                 time += 1
             if a1 == a2:
