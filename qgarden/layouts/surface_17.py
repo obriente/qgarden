@@ -112,6 +112,9 @@ def s17_heisenberg_frame(
         boundary_label='B',
         starting_parities=None,
         precompile=True,
+        ancillas=None,
+        label_list=None,
+        pauli_strings=None,
         Z_first=True):
     """Makes the full Heisenberg frame for S17
 
@@ -123,23 +126,35 @@ def s17_heisenberg_frame(
     starting_parities : dict
         the starting parities of any logical operators
         to track.
+
+    ancillas : dict or None
+        for each ancilla, a list of data qubits measured or None
+
+    label_list : list or None
+        list of ancilla qubits in order plus boundary label at the end
+
+    pauli_strings : list or None:
+        list of pauli strings for logical operators
     """
 
-    ancillas = get_s17_layout(boundary_label)
+    if ancillas is None:
+        ancillas = get_s17_layout(boundary_label)
 
-    if Z_first:
-        label_list = ['Z0','Z1','Z2','Z3',
-                      'X0','X1','X2','X3',boundary_label]
-    else:
-        label_list = ['X0','X1','X2','X3',
-                      'Z0','Z1','Z2','Z3',boundary_label]
+    if label_list is None:
+        if Z_first:
+            label_list = ['Z0','Z1','Z2','Z3',
+                          'X0','X1','X2','X3',boundary_label]
+        else:
+            label_list = ['X0','X1','X2','X3',
+                          'Z0','Z1','Z2','Z3',boundary_label]
 
     label_list2 = [swap_XZ(label) for label in label_list]
 
-    pauli_strings = {
-    'X': get_X_logical_s17(),
-    'Y': get_Y_logical_s17(),
-    'Z': get_Z_logical_s17()}
+    if pauli_strings is None:
+        pauli_strings = {
+        'X': get_X_logical_s17(),
+        'Y': get_Y_logical_s17(),
+        'Z': get_Z_logical_s17()}
 
     frame1_paulis = {}
     frame2_paulis = {}
