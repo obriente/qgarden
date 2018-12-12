@@ -185,9 +185,10 @@ def s17_heisenberg_frame(
         frames=[frame1,frame2], cliffords=cliffords,
         label_list=None)
 
-def s17_code_layout():
-    layout = CodeLayout(
+def s17_code_layout(anc_data=None):
+    if anc_data is None:
         anc_data = [('X',[0,2]), ('X', [1,1]), ('X', [2,2]),
                     ('X', [3,1]), ('Z',[1,0]), ('Z', [1,2]),
-                    ('Z', [2,1]), ('Z', [2,3])])
+                    ('Z', [2,1]), ('Z', [2,3])]
+    layout = CodeLayout(anc_data=anc_data)
     return layout
