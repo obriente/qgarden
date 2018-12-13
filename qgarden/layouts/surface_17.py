@@ -65,6 +65,13 @@ def get_Z_logical_s17():
 def get_Y_logical_s17():
     return get_X_logical_s17() + get_Z_logical_s17()
 
+def get_IClifford_sq():
+    cliff = LogicalClifford()
+    cliff.op_dic['X'] = ['X', 0]
+    cliff.op_dic['Y'] = ['Y', 0]
+    cliff.op_dic['Z'] = ['Z', 0]
+    return cliff
+
 def get_XClifford_sq():
     cliff = LogicalClifford()
     cliff.op_dic['X'] = ['X', 0]
@@ -174,6 +181,7 @@ def s17_heisenberg_frame(
         paulis=frame2_paulis, cliffords=None, label_list=label_list2)
 
     cliffords = {
+    'I': get_IClifford_sq(),
     'X': get_XClifford_sq(),
     'Y': get_YClifford_sq(),
     'Z': get_ZClifford_sq(),

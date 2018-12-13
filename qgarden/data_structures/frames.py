@@ -26,6 +26,8 @@ class HeisenbergFrame:
     parities : dict of booleans
         a list of parities for every logical pauli
         being tracked.
+    paulis : dict of LogicalPaulis:
+        a list of logical operators
     operators : dict of LogicalPaulis
         a list of logical operators
     cliffords : dict of LogicalCliffords
@@ -279,7 +281,9 @@ class LogicalPauli(AncillaGraph, WeightedPointerGraph):
 
     Params
     ------
-    logical : str
+    ancillas : dict of lists of str
+        the ancillas that measure this operator
+    logical : list of str
         the logical operator this Pauli describes
     precompile : boolean
         whether to precompile a table of parities
@@ -301,10 +305,10 @@ class LogicalPauli(AncillaGraph, WeightedPointerGraph):
 
         if precompile:
             self.precompiled_parities = {s1:
-            {s2: self.get_weight_min_distance(
-                s1, s2, 'xor', 'expect_same') 
-             for s2 in self.vertex_dic if s2 != s1}
-            for s1 in self.vertex_dic}
+                {s2: self.get_weight_min_distance(
+                    s1, s2, 'xor', 'expect_same') 
+                 for s2 in self.vertex_dic if s2 != s1}
+                for s1 in self.vertex_dic}
             # Fix boundary as it doesn't see
             # any paths out.
             self.precompiled_parities[self.boundary_label] = {
