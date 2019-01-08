@@ -16,7 +16,7 @@ reload(weight_gen)
 def run(data, frame, max_lookback,
         weight_matrix, boundary_vec, code_layout,
         fstab_as_deriv=False,
-        continuous_flag=True, deriv_flag=2, tbw_tol=0.1):
+        continuous_flag=True, deriv_flag=2, tbw_tol=100):
 
     '''
     input:
@@ -62,7 +62,8 @@ def run(data, frame, max_lookback,
                              weight_calculation_method='weight_matrix',
                              weight_matrix=weight_matrix,
                              boundary_vec=boundary_vec,
-                             deriv_flag=deriv_flag)
+                             deriv_flag=deriv_flag,
+                             tbw_tol=tbw_tol)
 
     # Initialize list of results
     result = []
