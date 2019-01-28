@@ -14,9 +14,9 @@ reload(weight_gen)
 
 
 def run(data, frame, max_lookback,
-        weight_matrix, boundary_vec, anc_pos_data,
-        stab_index_left, stab_index_right, fstab_as_deriv=False,
-        continuous_flag=True, deriv_flag=2, tbw_tol=0.1):
+        weight_matrix, boundary_vec, code_layout,
+        fstab_as_deriv=False,
+        continuous_flag=True, deriv_flag=2, tbw_tol=100):
 
     '''
     input:
@@ -52,24 +52,23 @@ def run(data, frame, max_lookback,
         made in the gardener.
     '''
 
-    code_layout = CodeLayout(anc_pos_data)
     num_ancillas = code_layout.get_num_anc()
     # Initialize gardener
     gard = gardener.Gardener(correction_matrix=None,
-                             frames=frames,
+                             code_layout=code_layout,
+                             frame=frame,
                              num_ancillas=num_ancillas,
                              max_lookback=max_lookback,
                              weight_calculation_method='weight_matrix',
                              weight_matrix=weight_matrix,
                              boundary_vec=boundary_vec,
-                             deriv_flag=deriv_flag)
+                             deriv_flag=deriv_flag,
+                             tbw_tol=tbw_tol)
 
     # Initialize list of results
     result = []
 
     for experiment in data:
-        parities = {'Z': 0}
-        frame.reset(parities=parities)
 
         # In this case we just generate a single binary result
         # for each experiment.
@@ -81,16 +80,40 @@ def run(data, frame, max_lookback,
         syndromes, final_stabilizers, logicals = experiment
 
         # Loop over syndromes, inserting each into the gardener
-        for syndrome, logical in zip(syndromes, logicals):
+        for syndrome in syndromes:
             gard.update(syndrome)
-            frame.apply_logical(logical)
 
-        gard.result(
+        # Calculate the stabilizer indices
+        H_par = sum([x == 'H' for x in logicals]) % 2
+        if H_par == 0:
+            sil = 0
+            sir = num_ancillas // 2
+        else:
+            sil = num_ancillas // 2
+            sir = num_ancillas
+
+
+        corrections = gard.result(
             final_stabilizers=final_stabilizers,
             stab_index_left=sil,
             stab_index_right=sir,
-            continue_flag=False)
+            continue_flag=False,
+            return_corrections=True)
 
+        corrections = sorted(corrections, key=lambda x: x[0])
+
+        parities = {'Z': 0}
+        frame.reset(active_frame=0, parities=parities)
+        time = 0
+        for next_time, a1, a2 in corrections:
+            while time < next_time-1:
+                frame.apply_clifford(logicals[time])
+                time += 1
+            if a1 == a2:
+                continue
+            frame.update_from_index(a1,a2)
+        for logical in logicals[time:]:
+            frame.apply_clifford(logical)
         result.append(frame.get_parity('Z'))
 
     return result

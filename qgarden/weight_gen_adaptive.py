@@ -9,17 +9,18 @@ Licensed under the GNU GPL 3.0
 from .weights_moving_average import weights_moving_average
 
 
-def run(max_lookback, training_data, code_layout, max_dist, many_sets=False):
+def run(max_lookback, training_data, code_layout, max_dist, many_sets=False, plotting=False):
+
+    if many_sets is False:
+        training_data = [training_data]
 
     # Generate weight matrices from training dataset
     weight_matrix_object = weights_moving_average(max_lookback,
                                                   sum([len(x)
                                                        for x in training_data]),
                                                   max_dist,
-                                                  code_layout)
-
-    if many_sets is False:
-        training_data = [training_data]
+                                                  code_layout,
+                                                  plotting=plotting)
 
     for dset in training_data:
 

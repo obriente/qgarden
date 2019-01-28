@@ -53,7 +53,6 @@ class Gardener:
     def __init__(self, *,
                  code_layout,
                  num_ancillas,
-                 frame=None,
                  max_lookback=50,
                  weight_calculation_method='weight_matrix',
                  **kwargs):
@@ -123,8 +122,6 @@ class Gardener:
         # Store the number of rows we need to keep in the weight matrix
         self.max_rows = (max_lookback + 1) * num_ancillas
         self.max_lookback = max_lookback
-
-        self.frame=frame
 
         # Tolerance for the probabilities in the P_matrices
         try:
@@ -432,6 +429,7 @@ class Gardener:
 
     def result(self,
                boundary_switch=1,
+               return_corrections=False,
                continue_flag=False,
                final_stabilizers=None,
                syndromedd=None,
@@ -453,6 +451,9 @@ class Gardener:
         Output:
         res: the logical error bitflip bit.
         '''
+        if return_corrections:
+            corrections = []
+
         if boundary_switch > 0:
 
             res = 0
@@ -541,8 +542,9 @@ class Gardener:
                     else:
                         continue
 
-                    if self.frame:
-                        frame.update_from_index(ancilla_index, pair_index)
+                    if return_corrections:
+                        corrections.append([timestep, ancilla_index, pair_index])
+
                     else:
                         res = res ^ self.code_layout.get_correction(
                             ancilla_index, pair_index, stab_index_left, stab_index_right)
@@ -573,8 +575,10 @@ class Gardener:
 
                 else:
                     continue
-                if self.frame:
-                    frame.update_from_index(ancilla_index, pair_index)
+
+                if return_corrections:
+                    corrections.append([timestep, ancilla_index, pair_index])
+
                 res2 = res2 ^ self.code_layout.get_correction(
                     ancilla_index, pair_index, stab_index_left, stab_index_right)
 
@@ -582,6 +586,8 @@ class Gardener:
         if continue_flag and len(error_list) > 0:
             del self.full_error_list[-len(error_list):]
             self.num_errors -= len(error_list)
+        if return_corrections:
+            return corrections
         if frame:
             return
         elif boundary_switch == 0:

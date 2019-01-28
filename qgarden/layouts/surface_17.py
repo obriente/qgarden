@@ -8,7 +8,8 @@ from qgarden.data_structures import(
     LogicalPauli,
     LogicalClifford,
     HeisenbergFrame,
-    MultiFrame)
+    MultiFrame,
+    CodeLayout)
 
 def get_s17_layout(boundary_label='B'):
     ancillas = {
@@ -64,6 +65,13 @@ def get_Z_logical_s17():
 def get_Y_logical_s17():
     return get_X_logical_s17() + get_Z_logical_s17()
 
+def get_IClifford_sq():
+    cliff = LogicalClifford()
+    cliff.op_dic['X'] = ['X', 0]
+    cliff.op_dic['Y'] = ['Y', 0]
+    cliff.op_dic['Z'] = ['Z', 0]
+    return cliff
+
 def get_XClifford_sq():
     cliff = LogicalClifford()
     cliff.op_dic['X'] = ['X', 0]
@@ -111,6 +119,9 @@ def s17_heisenberg_frame(
         boundary_label='B',
         starting_parities=None,
         precompile=True,
+        ancillas=None,
+        label_list=None,
+        pauli_strings=None,
         Z_first=True):
     """Makes the full Heisenberg frame for S17
 
@@ -122,23 +133,35 @@ def s17_heisenberg_frame(
     starting_parities : dict
         the starting parities of any logical operators
         to track.
+
+    ancillas : dict or None
+        for each ancilla, a list of data qubits measured or None
+
+    label_list : list or None
+        list of ancilla qubits in order plus boundary label at the end
+
+    pauli_strings : list or None:
+        list of pauli strings for logical operators
     """
 
-    ancillas = get_s17_layout(boundary_label)
+    if ancillas is None:
+        ancillas = get_s17_layout(boundary_label)
 
-    if Z_first:
-        label_list = ['Z0','Z1','Z2','Z3',
-                      'X0','X1','X2','X3',boundary_label]
-    else:
-        label_list = ['X0','X1','X2','X3',
-                      'Z0','Z1','Z2','Z3',boundary_label]
+    if label_list is None:
+        if Z_first:
+            label_list = ['Z0','Z1','Z2','Z3',
+                          'X0','X1','X2','X3',boundary_label]
+        else:
+            label_list = ['X0','X1','X2','X3',
+                          'Z0','Z1','Z2','Z3',boundary_label]
 
     label_list2 = [swap_XZ(label) for label in label_list]
 
-    pauli_strings = {
-    'X': get_X_logical_s17(),
-    'Y': get_Y_logical_s17(),
-    'Z': get_Z_logical_s17()}
+    if pauli_strings is None:
+        pauli_strings = {
+        'X': get_X_logical_s17(),
+        'Y': get_Y_logical_s17(),
+        'Z': get_Z_logical_s17()}
 
     frame1_paulis = {}
     frame2_paulis = {}
@@ -158,6 +181,7 @@ def s17_heisenberg_frame(
         paulis=frame2_paulis, cliffords=None, label_list=label_list2)
 
     cliffords = {
+    'I': get_IClifford_sq(),
     'X': get_XClifford_sq(),
     'Y': get_YClifford_sq(),
     'Z': get_ZClifford_sq(),
@@ -169,9 +193,10 @@ def s17_heisenberg_frame(
         frames=[frame1,frame2], cliffords=cliffords,
         label_list=None)
 
-def s17_code_layout():
-    layout = CodeLayout(
+def s17_code_layout(anc_data=None):
+    if anc_data is None:
         anc_data = [('X',[0,2]), ('X', [1,1]), ('X', [2,2]),
                     ('X', [3,1]), ('Z',[1,0]), ('Z', [1,2]),
-                    ('Z', [2,1]), ('Z', [2,3])])
+                    ('Z', [2,1]), ('Z', [2,3])]
+    layout = CodeLayout(anc_data=anc_data)
     return layout

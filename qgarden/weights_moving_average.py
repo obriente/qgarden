@@ -8,17 +8,19 @@ Licensed under the GNU GPL 3.0
 '''
 from math import sqrt, log
 import numpy as np
+from matplotlib import pyplot as plt
 
 
 
 class weights_moving_average(object):
 
-    def __init__(self, lookback, window, max_dist, code_layout):
+    def __init__(self, lookback, window, max_dist, code_layout, *, plotting=False):
         self.code_layout = code_layout
         self.num_anc = self.code_layout.get_num_anc()
         self.lookback = lookback
         self.window = window
         self.max_dist = max_dist
+        self.plotting = plotting
 
 
         self.measurement_matrix = np.zeros(shape=(2, self.num_anc))
@@ -131,7 +133,13 @@ class weights_moving_average(object):
                             self.and_matrix[0, i, i] *
                             self.and_matrix[0, j, j]) /\
                             (1 - 2 * self.xor_matrix[t, i, j])
-                        
+
+        if self.plotting:
+            plt.figure(figsize=(10, 10))
+            plt.imshow(self.var_matrix[0], vmin=0, vmax=0.25)
+            plt.colorbar()
+            plt.title('var_matrix')
+
     def sig_test(self, t, i, j):
         anc_dist = self.code_layout.get_chebyshev_dist(i, j)
         if anc_dist is None or ((anc_dist + abs(t)) > self.max_dist):
