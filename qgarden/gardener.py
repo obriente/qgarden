@@ -588,8 +588,6 @@ class Gardener:
             self.num_errors -= len(error_list)
         if return_corrections:
             return corrections
-        if frame:
-            return
         elif boundary_switch == 0:
             return res2
         elif boundary_switch == 1:
