@@ -42,7 +42,7 @@ class CodeLayout():
         '''
 
         x_stabs = [i for i, anc_type in enumerate(
-            self.anc_types) if anc_type is 'X']
+            self.anc_types) if anc_type == 'X']
         return x_stabs
 
     def get_z_stabs(self):
@@ -53,7 +53,7 @@ class CodeLayout():
         '''
 
         z_stabs = [i for i, anc_type in enumerate(
-            self.anc_types) if anc_type is 'Z']
+            self.anc_types) if anc_type == 'Z']
         return z_stabs
 
     def get_x_stabs_pos(self):
@@ -155,11 +155,11 @@ class CodeLayout():
         if start_index not in final_stab_range or end_index not in final_stab_range:
             return 0
 
-        if start_index is -1:
-            if end_index is -1:
+        if start_index == -1:
+            if end_index == -1:
                 return 0
             return self.check_boundary(end_index)
-        if end_index is -1:
+        if end_index == -1:
             return self.check_boundary(start_index)
 
         cheb_dist = self.get_chebyshev_dist(
