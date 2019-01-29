@@ -86,7 +86,7 @@ class CodeLayout():
         Returns:
             int or None -- The Manhattan distance between the two ancillas if they belong to the same stabilizer group and None otherwise
         '''
-        if self.anc_types[start_index] is not self.anc_types[end_index]:
+        if self.anc_types[start_index] == self.anc_types[end_index]:
             return None
         cheb_dist = np.max(
             np.abs(self.anc_cords[start_index] - self.anc_cords[end_index]))
