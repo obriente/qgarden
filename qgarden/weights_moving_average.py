@@ -14,13 +14,15 @@ from matplotlib import pyplot as plt
 
 class weights_moving_average(object):
 
-    def __init__(self, lookback, window, max_dist, code_layout, *, plotting=False):
+    def __init__(self, lookback, window, max_dist,
+                 code_layout, deriv_flag=2, *, plotting=False):
         self.code_layout = code_layout
         self.num_anc = self.code_layout.get_num_anc()
         self.lookback = lookback
         self.window = window
         self.max_dist = max_dist
         self.plotting = plotting
+        self.deriv_flag = deriv_flag
 
 
         self.measurement_matrix = np.zeros(shape=(2, self.num_anc))
@@ -37,15 +39,35 @@ class weights_moving_average(object):
         self.boundary_q = np.zeros(shape=(self.num_anc))
         self.num_measurements = 0
 
-    def new_syndrome(self):
-        self.syndrome_matrices.append(np.array([]))
-        self.num_measurements = 0
+    def new_syndrome(self, measurements=None):
+        if measurements is None:
+            self.syndrome_matrices.append(np.array([]))
+            self.num_measurements = 0
+        else:
+            self.num_measurements = len(measurements)
+            msmts = np.array(measurements)
+            if len(msmts.shape) == 1:
+                msmts = msmts[:, np.newaxis]
+
+            self.measurement_matrix = msmts
+            if self.deriv_flag == 0:
+                syn = np.array(msmts)
+            else:
+                syn = np.logical_xor(
+                    msmts[:-self.deriv_flag],
+                    msmts[self.deriv_flag:])
+
+            self.syndrome_matrices.append(syn)
 
     def update_syndrome(self, new_measurement):
 
         # Calculate Derivative of Measurements
-        new_syndrome = np.logical_xor(
-            new_measurement, self.measurement_matrix[1]).astype(int)
+        if self.deriv_flag > 0:
+            new_syndrome = np.logical_xor(
+                new_measurement,
+                self.measurement_matrix[self.deriv_flag-1]).astype(int)
+        else:
+            new_syndrome = new_measurement
         self.num_measurements += 1
 
         # Pop odd measurement, add new one
@@ -90,10 +112,10 @@ class weights_moving_average(object):
                                 num_terms[t]
 
         if self.plotting:
-            plt.figure(figsize=(10,10))
+            plt.figure(figsize=(10, 10))
             plt.imshow(np.log(self.xor_matrix[0]))
             plt.colorbar()
-            plt.title('log(xor_matrix)')
+            plt.title('log(xor matrix)')
 
     def update_and_matrix(self):
 
@@ -118,7 +140,7 @@ class weights_moving_average(object):
             plt.figure(figsize=(10,10))
             plt.imshow(np.log(self.and_matrix[0]))
             plt.colorbar()
-            plt.title('log(and_matrix)')
+            plt.title('log(and matrix)')
 
     def update_varmat(self):
 
@@ -138,7 +160,7 @@ class weights_moving_average(object):
             plt.figure(figsize=(10, 10))
             plt.imshow(self.var_matrix[0], vmin=0, vmax=0.25)
             plt.colorbar()
-            plt.title('var_matrix')
+            plt.title('var matrix')
 
     def sig_test(self, t, i, j):
         anc_dist = self.code_layout.get_chebyshev_dist(i, j)
@@ -204,6 +226,12 @@ class weights_moving_average(object):
         A_bound_vec = np.transpose(
             np.vstack([np.array(exact_boundary_q_left*self.lookback),
                        np.array(exact_boundary_q_right*self.lookback)]))
+
+        if self.plotting:
+            plt.figure(figsize=(10, 10))
+            plt.imshow(A_bound_vec)
+            plt.colorbar()
+            plt.title('boundary adjacency')
 
         boundary_weights = -np.log(
             np.max(np.dot(weight_matrix, A_bound_vec), axis=1)[:self.num_anc])
