@@ -18,14 +18,13 @@ todo: Currently we assume a square surface, this could be easily changed.
 
 from . import gardener
 from . import weight_gen_simple as weight_gen
-from .code_layout import CodeLayout
 from importlib import reload
 reload(gardener)
 reload(weight_gen)
 
 
-def run(data, distance, max_lookback, px, py, pz, pm, anc_pos_data, *,
-        x_correction_flag=False, continuous_flag=True,
+def run(data, distance, max_lookback, px, py, pz, pm, code_layout, *,
+        x_correction_flag=False, continuous_flag=False,
         deriv_flag=2, tbw_tol=0.1):
     '''
     input:
@@ -67,9 +66,6 @@ def run(data, distance, max_lookback, px, py, pz, pm, anc_pos_data, *,
     @ tbw_tol: the tolerance on the time boundary weight calculation
         made in the gardener.
     '''
-    code_layout = CodeLayout(anc_pos_data)
-
-    code_layout = CodeLayout(anc_pos_data)
 
     x_anc = code_layout.get_x_stabs()
     z_anc = code_layout.get_z_stabs()
